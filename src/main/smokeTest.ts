@@ -132,7 +132,7 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
     return `${list.length} عملية`
   })
 
-  await check('خدمات ويندوز', async () => {
+  await check('خدمات النظام', async () => {
     const list = await listServices()
     if (list.length === 0) throw new Error('لم تُقرأ أي خدمة')
     return `${list.length} خدمة`

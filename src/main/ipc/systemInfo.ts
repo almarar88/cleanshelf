@@ -19,6 +19,13 @@ export function registerSystemInfoIpc(): void {
   ipcMain.handle(
     'system:relaunchAsAdmin',
     async (): Promise<{ started: boolean; message: string }> => {
+      if (process.platform !== 'win32') {
+        return {
+          started: false,
+          message:
+            'لا يوجد ما يقابل "التشغيل كمسؤول" على ماك — سيطلب النظام إذنك عند كل عملية تحتاج صلاحيات'
+        }
+      }
       if (!app.isPackaged) {
         return {
           started: false,

@@ -13,7 +13,19 @@ interface RawDrive {
 }
 
 export async function listDrives(): Promise<string[]> {
-  if (!isWindows) return [os.homedir()]
+  if (!isWindows) {
+    // ما يقابل "الأقراص" على ماك: الجذر ومجلد المستخدم وأي وحدات مركّبة
+    const roots = ['/', os.homedir()]
+    try {
+      const volumes = await fs.readdir('/Volumes', { withFileTypes: true })
+      for (const v of volumes) {
+        if (v.isDirectory() || v.isSymbolicLink()) roots.push(path.join('/Volumes', v.name))
+      }
+    } catch {
+      // لا وحدات خارجية مركّبة
+    }
+    return [...new Set(roots)]
+  }
   try {
     const raw = await runPowerShellJson<RawDrive[] | RawDrive>(
       'Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,Size,FreeSpace | ConvertTo-Json -Compress'

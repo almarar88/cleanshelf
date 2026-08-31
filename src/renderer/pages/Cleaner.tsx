@@ -13,6 +13,7 @@ export function Cleaner(): JSX.Element {
   const [progress, setProgress] = useState<Record<string, CleanProgress>>({})
   const [showConfirm, setShowConfirm] = useState(false)
   const [isAdmin, setIsAdmin] = useState(true)
+  const [isMac, setIsMac] = useState(false)
   const [makeRestorePoint, setMakeRestorePoint] = useState(false)
 
   const scan = async (): Promise<void> => {
@@ -32,6 +33,10 @@ export function Cleaner(): JSX.Element {
   useEffect(() => {
     scan()
     window.api.system.isAdmin().then(setIsAdmin).catch(() => setIsAdmin(true))
+    window.api.platform
+      .info()
+      .then((p) => setIsMac(p.isMac))
+      .catch(() => setIsMac(false))
     const off = window.api.cleaner.onProgress((p) => {
       setProgress((prev) => ({ ...prev, [p.categoryId]: p }))
     })
@@ -114,14 +119,17 @@ export function Cleaner(): JSX.Element {
           className="card card-pad"
           style={{ marginBottom: 16, borderRight: '3px solid var(--warning)' }}
         >
-          <strong>🛡️ بعض الفئات تحتاج صلاحيات المدير</strong>
+          <strong>🛡️ بعض الفئات تحتاج صلاحيات مرتفعة</strong>
           <div className="muted" style={{ fontSize: 13, margin: '6px 0 10px' }}>
-            الفئات التالية موجودة داخل مجلدات ويندوز المحمية، ولن يُحذف منها شيء دون رفع الصلاحيات:{' '}
+            الفئات التالية داخل مجلدات يملكها النظام، ولن يُحذف منها شيء بالصلاحيات الحالية:{' '}
             {adminCategoriesWithData.map((c) => categoryLabel(c.labelKey).title).join('، ')}.
+            {isMac && ' على ماك لا توجد "إعادة تشغيل كمسؤول"؛ نظّفها من الطرفية أو تخطَّ هذه الفئات.'}
           </div>
-          <button className="btn btn-sm" onClick={relaunchAsAdmin}>
-            إعادة تشغيل التطبيق كمسؤول
-          </button>
+          {!isMac && (
+            <button className="btn btn-sm" onClick={relaunchAsAdmin}>
+              إعادة تشغيل التطبيق كمسؤول
+            </button>
+          )}
         </div>
       )}
 

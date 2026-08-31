@@ -26,7 +26,7 @@ const ADVANCED_ITEMS: NavItem[] = [
 
 const SYSTEM_ITEMS: NavItem[] = [
   { id: 'processes', label: 'العمليات', icon: '⚡' },
-  { id: 'services', label: 'خدمات ويندوز', icon: '⚙️' },
+  { id: 'services', label: 'خدمات النظام', icon: '⚙️' },
   { id: 'network', label: 'الشبكة', icon: '🌐' },
   { id: 'system', label: 'معلومات النظام', icon: '💻' },
   { id: 'history', label: 'سجل التنظيف', icon: '🧾' }
