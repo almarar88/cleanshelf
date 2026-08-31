@@ -4,7 +4,13 @@ import path from 'node:path'
 import type { InstalledApp, LeftoverItem } from '../../shared/types'
 import { runPowerShellJson, psQuote } from './powershell'
 import { dirStats, pathExists } from './fsWalk'
-import { env } from './platform'
+import { env, isWindows } from './platform'
+import {
+  listInstalledAppsMac,
+  uninstallAppMac,
+  findLeftoversMac,
+  removeLeftoverMac
+} from './uninstallerLib.mac'
 
 interface RawApp {
   Key: string
@@ -47,6 +53,7 @@ $apps = foreach ($s in $sets) {
 `
 
 export async function listInstalledApps(): Promise<InstalledApp[]> {
+  if (!isWindows) return listInstalledAppsMac()
   const raw = await runPowerShellJson<RawApp[] | RawApp>(LIST_SCRIPT, 45_000)
   const arr = Array.isArray(raw) ? raw : raw ? [raw] : []
   return arr
@@ -66,6 +73,7 @@ export async function listInstalledApps(): Promise<InstalledApp[]> {
 }
 
 export function runUninstallCommand(command: string): Promise<{ success: boolean; message: string }> {
+  if (!isWindows) return uninstallAppMac(command)
   return new Promise((resolve) => {
     if (!command || !command.trim()) {
       resolve({ success: false, message: 'لا يوجد أمر إزالة مسجَّل لهذا البرنامج.' })
@@ -97,6 +105,7 @@ function normalizeForMatch(name: string): string {
 }
 
 export async function findLeftovers(appName: string, publisher: string): Promise<LeftoverItem[]> {
+  if (!isWindows) return findLeftoversMac(appName, publisher)
   const targets = [appName, publisher].filter((s) => s && s.trim().length > 1)
   const normalizedTargets = targets.map(normalizeForMatch).filter((s) => s.length > 2)
   if (normalizedTargets.length === 0) return []
@@ -126,6 +135,7 @@ export async function findLeftovers(appName: string, publisher: string): Promise
 }
 
 export async function removeLeftoverFolder(target: string): Promise<void> {
+  if (!isWindows) return removeLeftoverMac(target)
   const isSafe = LEFTOVER_ROOTS.some((root) => target.toLowerCase().startsWith(root.toLowerCase()))
   if (!isSafe) {
     throw new Error('مسار غير آمن للحذف.')

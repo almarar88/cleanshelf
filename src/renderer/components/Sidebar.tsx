@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppInfo } from '../../shared/types'
+import type { AppInfo, PlatformInfo } from '../../shared/types'
 import type { PageId } from '../App'
 
 interface NavItem {
@@ -32,6 +32,8 @@ const SYSTEM_ITEMS: NavItem[] = [
   { id: 'history', label: 'سجل التنظيف', icon: '🧾' }
 ]
 
+const MAC_ITEM: NavItem = { id: 'mactools', label: 'أدوات ماك', icon: '🍎' }
+
 export function Sidebar({
   active,
   onNavigate
@@ -40,12 +42,17 @@ export function Sidebar({
   onNavigate: (id: PageId) => void
 }): JSX.Element {
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const [platform, setPlatform] = useState<PlatformInfo | null>(null)
 
   useEffect(() => {
     window.api.system
       .appInfo()
       .then(setInfo)
       .catch(() => setInfo(null))
+    window.api.platform
+      .info()
+      .then(setPlatform)
+      .catch(() => setPlatform(null))
   }, [])
 
   return (
@@ -79,7 +86,7 @@ export function Sidebar({
       ))}
 
       <div className="nav-section-label">النظام</div>
-      {SYSTEM_ITEMS.map((item) => (
+      {(platform?.isMac ? [MAC_ITEM, ...SYSTEM_ITEMS] : SYSTEM_ITEMS).map((item) => (
         <div
           key={item.id}
           className={`nav-item ${active === item.id ? 'active' : ''}`}

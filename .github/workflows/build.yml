@@ -1,4 +1,4 @@
-name: Build Windows exe
+name: Build
 
 on:
   push:
@@ -8,7 +8,19 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            build: npm run build:win
+            artifacts: dist/*.exe
+          - os: macos-latest
+            platform: mac
+            build: npm run build:mac
+            artifacts: dist/*.dmg
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,12 +35,13 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Build installer + portable exe
-        run: npm run build:win
+      - name: Build
+        run: ${{ matrix.build }}
 
-      # يشغّل التطبيق المبني فعليًا: يتأكد أن النافذة تُحمَّل، وأن جسر preload
-      # يصل للواجهة، وأن قراءة السجل والأقراص تعمل — أشياء لا يكشفها البناء وحده.
-      - name: Smoke-test the built app
+      # يشغّل التطبيق المبني فعليًا على النظام الهدف: يتأكد أن الواجهة تُحمَّل،
+      # وأن جسر preload يصل، وأن منطق المنصة يعمل — لا يكشفه البناء وحده.
+      - name: Smoke-test (Windows)
+        if: matrix.platform == 'windows'
         shell: pwsh
         env:
           CLEANSHELF_SMOKE_TEST: '1'
@@ -38,17 +51,33 @@ jobs:
           $env:CLEANSHELF_SMOKE_LOG = Join-Path $PWD "smoke-log.txt"
           $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow
           $null = $proc.Handle
-          if (-not $proc.WaitForExit(180000)) {
-            $proc.Kill()
-            throw "التطبيق لم ينتهِ خلال 180 ثانية"
-          }
+          if (-not $proc.WaitForExit(180000)) { $proc.Kill(); throw "لم ينتهِ خلال 180 ثانية" }
           if (Test-Path $env:CLEANSHELF_SMOKE_LOG) { Get-Content $env:CLEANSHELF_SMOKE_LOG }
           if ($proc.ExitCode -ne 0) { throw "فشل فحص التشغيل برمز $($proc.ExitCode)" }
-          Write-Host "فحص التشغيل نجح"
+
+      - name: Smoke-test (macOS)
+        if: matrix.platform == 'mac'
+        env:
+          CLEANSHELF_SMOKE_TEST: '1'
+          CLEANSHELF_SMOKE_LOG: smoke-log.txt
+        run: |
+          APP="dist/mac-universal/CleanShelf.app/Contents/MacOS/CleanShelf"
+          if [ ! -f "$APP" ]; then APP="dist/mac/CleanShelf.app/Contents/MacOS/CleanShelf"; fi
+          if [ ! -f "$APP" ]; then echo "لم يُعثر على التطبيق المبني:"; ls -R dist | head -40; exit 1; fi
+          "$APP" & APP_PID=$!
+          # لا واجهة رسومية على العامل، فنمنحه مهلة ثم نتحقق من السجل ورمز الخروج
+          ( sleep 180 && kill -9 $APP_PID 2>/dev/null ) & WATCHDOG=$!
+          set +e
+          wait $APP_PID
+          CODE=$?
+          set -e
+          kill -9 $WATCHDOG 2>/dev/null || true
+          [ -f smoke-log.txt ] && cat smoke-log.txt
+          if [ $CODE -ne 0 ]; then echo "فشل فحص التشغيل برمز $CODE"; exit 1; fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: CleanShelf-windows-build
-          path: dist/*.exe
+          name: CleanShelf-${{ matrix.platform }}
+          path: ${{ matrix.artifacts }}
           if-no-files-found: error

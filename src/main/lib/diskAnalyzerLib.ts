@@ -141,7 +141,8 @@ export async function findBrokenShortcuts(
   rootPath: string,
   hooks: AnalyzeHooks = {}
 ): Promise<BrokenShortcut[]> {
-  if (!isWindows) return []
+  // ما يقابل اختصارات .lnk على ماك هو الروابط الرمزية المكسورة
+  if (!isWindows) return findBrokenSymlinks(rootPath, hooks)
 
   const files = await listFilesRecursive(rootPath, {
     shouldCancel: hooks.shouldCancel,
@@ -183,5 +184,62 @@ export async function findBrokenShortcuts(
       broken.push({ shortcutPath: item.Shortcut, targetPath: item.Target })
     }
   }
+  return broken
+}
+
+
+/** روابط رمزية يشير هدفها إلى شيء لم يعد موجودًا (مكافئ ماك للاختصار المعطوب). */
+async function findBrokenSymlinks(
+  rootPath: string,
+  hooks: AnalyzeHooks = {}
+): Promise<BrokenShortcut[]> {
+  const { onProgress, shouldCancel } = hooks
+  const broken: BrokenShortcut[] = []
+  const stack: string[] = [rootPath]
+  let visited = 0
+
+  while (stack.length > 0) {
+    if (shouldCancel?.()) throw new ScanCancelledError()
+    const current = stack.pop()!
+
+    let entries: import('node:fs').Dirent[]
+    try {
+      entries = await fs.readdir(current, { withFileTypes: true })
+    } catch {
+      continue
+    }
+
+    for (const entry of entries) {
+      const full = path.join(current, entry.name)
+      visited += 1
+      if (visited % 300 === 0) {
+        onProgress?.({
+          phase: 'walking',
+          filesSeen: broken.length,
+          processed: visited,
+          total: 0,
+          currentPath: full
+        })
+      }
+
+      if (entry.isSymbolicLink()) {
+        try {
+          await fs.stat(full) // يتبع الرابط؛ يفشل إن كان الهدف مفقودًا
+        } catch {
+          let target = ''
+          try {
+            target = await fs.readlink(full)
+          } catch {
+            target = '—'
+          }
+          broken.push({ shortcutPath: full, targetPath: target })
+        }
+        continue
+      }
+
+      if (entry.isDirectory()) stack.push(full)
+    }
+  }
+
   return broken
 }

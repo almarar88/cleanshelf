@@ -3,6 +3,11 @@ import path from 'node:path'
 import type { StartupItem } from '../../shared/types'
 import { runPowerShell, runPowerShellJson, psQuote } from './powershell'
 import { env, isWindows } from './platform'
+import {
+  listStartupItemsMac,
+  setStartupItemEnabledMac,
+  removeStartupItemMac
+} from './startupLib.mac'
 import { pathExists } from './fsWalk'
 
 const RUN_KEY_HKCU = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
@@ -86,7 +91,7 @@ async function listStartupFolder(
 }
 
 export async function listStartupItems(): Promise<StartupItem[]> {
-  if (!isWindows) return []
+  if (!isWindows) return listStartupItemsMac()
 
   const [hkcu, hklm, disabledBackup] = await Promise.all([
     readRunKey(RUN_KEY_HKCU),
@@ -126,6 +131,7 @@ export async function listStartupItems(): Promise<StartupItem[]> {
 }
 
 export async function setStartupItemEnabled(item: StartupItem, enabled: boolean): Promise<void> {
+  if (!isWindows) return setStartupItemEnabledMac(item, enabled)
   if (item.location === 'HKCU-Run' || item.location === 'HKLM-Run') {
     const runKey = item.location === 'HKCU-Run' ? RUN_KEY_HKCU : RUN_KEY_HKLM
     if (enabled) {
@@ -158,6 +164,7 @@ export async function setStartupItemEnabled(item: StartupItem, enabled: boolean)
 }
 
 export async function removeStartupItem(item: StartupItem): Promise<void> {
+  if (!isWindows) return removeStartupItemMac(item)
   if (item.location === 'HKCU-Run' || item.location === 'HKLM-Run') {
     const runKey = item.location === 'HKCU-Run' ? RUN_KEY_HKCU : RUN_KEY_HKLM
     await runPowerShell(`

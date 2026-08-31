@@ -15,6 +15,7 @@ import { Network } from './pages/Network'
 import { DiskAnalyzer } from './pages/DiskAnalyzer'
 import { CleanupExtras } from './pages/CleanupExtras'
 import { History } from './pages/History'
+import { MacTools } from './pages/MacTools'
 import { ToastProvider } from './lib/toastContext'
 import { applyTheme, loadTheme, nextTheme, THEME_LABEL, type ThemeMode } from './lib/theme'
 
@@ -34,6 +35,7 @@ export type PageId =
   | 'diskanalyzer'
   | 'extras'
   | 'history'
+  | 'mactools'
 
 const PAGE_TITLES: Record<PageId, { title: string; sub: string }> = {
   dashboard: { title: 'الرئيسية', sub: 'نظرة عامة على حالة جهازك' },
@@ -50,7 +52,8 @@ const PAGE_TITLES: Record<PageId, { title: string; sub: string }> = {
   network: { title: 'الشبكة', sub: 'المحوّلات والاتصالات النشطة وأدوات التشخيص' },
   diskanalyzer: { title: 'محلّل المساحة', sub: 'اعرف أين تذهب مساحة قرصك بالضبط' },
   extras: { title: 'مجلدات واختصارات', sub: 'المجلدات الفارغة والاختصارات المعطوبة' },
-  history: { title: 'سجل التنظيف', sub: 'ما نُظّف سابقًا وكم مساحة تحرّرت' }
+  history: { title: 'سجل التنظيف', sub: 'ما نُظّف سابقًا وكم مساحة تحرّرت' },
+  mactools: { title: 'أدوات ماك', sub: 'مخلّفات التطبيقات المحذوفة وملفات اللغات' }
 }
 
 function renderPage(page: PageId, onNavigate: (id: PageId) => void): JSX.Element {
@@ -85,6 +88,8 @@ function renderPage(page: PageId, onNavigate: (id: PageId) => void): JSX.Element
       return <CleanupExtras />
     case 'history':
       return <History />
+    case 'mactools':
+      return <MacTools />
   }
 }
 

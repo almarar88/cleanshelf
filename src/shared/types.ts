@@ -84,6 +84,25 @@ export interface BrokenShortcut {
   targetPath: string
 }
 
+export interface OrphanLeftover {
+  path: string
+  name: string
+  sizeBytes: number
+  category: string
+}
+
+export interface LanguageFileGroup {
+  appName: string
+  appPath: string
+  languagePaths: string[]
+  sizeBytes: number
+}
+
+export interface PlatformInfo {
+  isWindows: boolean
+  isMac: boolean
+}
+
 export interface CleanHistoryEntry {
   timestamp: string
   freedBytes: number
@@ -134,7 +153,7 @@ export interface UninstallResult {
 
 export interface LeftoverItem {
   path: string
-  kind: 'folder' | 'registry'
+  kind: 'folder' | 'file' | 'registry'
   sizeBytes: number
 }
 

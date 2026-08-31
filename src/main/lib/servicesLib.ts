@@ -1,6 +1,7 @@
 import type { ServiceEntry } from '../../shared/types'
 import { runPowerShell, runPowerShellJson, psQuote } from './powershell'
 import { isWindows } from './platform'
+import { listServicesMac, controlServiceMac } from './servicesLib.mac'
 
 interface RawService {
   Name: string
@@ -33,7 +34,7 @@ const START_TYPE_LABEL: Record<string, ServiceEntry['startType']> = {
 }
 
 export async function listServices(): Promise<ServiceEntry[]> {
-  if (!isWindows) return []
+  if (!isWindows) return listServicesMac()
 
   const script = `
     Get-Service | Select-Object Name, DisplayName, Status, StartType |
@@ -56,6 +57,7 @@ export async function controlService(
   name: string,
   action: 'start' | 'stop' | 'restart'
 ): Promise<{ success: boolean; message: string }> {
+  if (!isWindows) return controlServiceMac(name, action)
   const cmd =
     action === 'start' ? 'Start-Service' : action === 'stop' ? 'Stop-Service' : 'Restart-Service'
   try {

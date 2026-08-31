@@ -29,3 +29,17 @@ nsis:
   artifactName: '${productName}-Setup.${ext}'
 portable:
   artifactName: '${productName}-Portable.${ext}'
+mac:
+  icon: build/icon.png
+  category: public.app-category.utilities
+  target:
+    # نسخة universal واحدة تعمل على Apple Silicon و Intel معًا،
+    # فيبقى للمستخدم رابط تحميل واحد لا خياران يربكانه
+    - target: dmg
+      arch: [universal]
+  artifactName: '${productName}.${ext}'
+  # التطبيق غير موقَّع، فتعطيل hardened runtime يتجنّب فشلًا مؤكدًا عند البناء
+  hardenedRuntime: false
+  gatekeeperAssess: false
+dmg:
+  artifactName: '${productName}.${ext}'

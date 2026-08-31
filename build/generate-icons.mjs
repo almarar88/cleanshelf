@@ -32,8 +32,9 @@ for (const size of [...SMALL_SIZES, ...BIG_SIZES]) {
   pngPaths.push(out)
 }
 
-await sharp(detailed, { density: 512 })
-  .resize(512, 512)
+// 1024 لأن electron-builder يشتق أيقونة ماك (.icns) من هذا الملف
+await sharp(detailed, { density: 1024 })
+  .resize(1024, 1024)
   .png()
   .toFile(path.join(here, 'icon.png'))
 

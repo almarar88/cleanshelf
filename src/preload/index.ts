@@ -21,7 +21,10 @@ import type {
   DiskUsageResult,
   BrokenShortcut,
   CleanHistoryEntry,
-  AppInfo
+  AppInfo,
+  OrphanLeftover,
+  LanguageFileGroup,
+  PlatformInfo
 } from '../shared/types'
 import type { BatchRenamePlan, BatchRenameResult } from '../main/lib/fileManagerLib'
 
@@ -131,6 +134,16 @@ const api = {
     ping: (host: string): Promise<PingResult> => ipcRenderer.invoke('net:ping', host),
     flushDns: (): Promise<{ success: boolean; message: string }> =>
       ipcRenderer.invoke('net:flushDns')
+  },
+  mac: {
+    orphanLeftovers: (): Promise<OrphanLeftover[]> => ipcRenderer.invoke('mac:orphanLeftovers'),
+    languageFiles: (): Promise<LanguageFileGroup[]> => ipcRenderer.invoke('mac:languageFiles'),
+    purgeMemory: (): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke('mac:purgeMemory'),
+    cancelScan: (): Promise<void> => ipcRenderer.invoke('mac:cancelScan')
+  },
+  platform: {
+    info: (): Promise<PlatformInfo> => ipcRenderer.invoke('platform:info')
   },
   history: {
     list: (): Promise<CleanHistoryEntry[]> => ipcRenderer.invoke('history:list'),

@@ -5,7 +5,8 @@ import { isWindows } from './platform'
 
 /** هل يعمل التطبيق حاليًا بصلاحيات المدير؟ */
 export async function isElevated(): Promise<boolean> {
-  if (!isWindows) return false
+  // على ماك لا توجد "إعادة تشغيل كمسؤول"؛ الامتياز يُطلب لكل عملية عند الحاجة
+  if (!isWindows) return typeof process.getuid === 'function' && process.getuid() === 0
   try {
     const out = await runPowerShell(
       '([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent())' +

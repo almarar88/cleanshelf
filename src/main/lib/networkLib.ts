@@ -1,6 +1,7 @@
 import si from 'systeminformation'
 import type { NetworkAdapter, NetworkConnection, PingResult } from '../../shared/types'
 import { runPowerShell, psQuote } from './powershell'
+import { run, runWithAdmin } from './shell'
 import { isWindows } from './platform'
 
 export async function listAdapters(): Promise<NetworkAdapter[]> {
@@ -49,7 +50,24 @@ export async function pingHost(host: string): Promise<PingResult> {
   }
 
   if (!isWindows) {
-    return { host: target, success: false, averageMs: 0, message: 'الاختبار متاح على ويندوز فقط' }
+    try {
+      const out = await run('ping', ['-c', '4', target], 30_000)
+      // نأخذ المتوسط من سطر الإحصاء: round-trip min/avg/max/stddev = a/b/c/d ms
+      const match = out.match(/=\s*[\d.]+\/([\d.]+)\//)
+      return {
+        host: target,
+        success: true,
+        averageMs: match ? Math.round(Number(match[1])) : 0,
+        message: 'نجح الاتصال'
+      }
+    } catch (err) {
+      return {
+        host: target,
+        success: false,
+        averageMs: 0,
+        message: (err as Error).message.trim().split('\n')[0] || 'تعذّر الوصول إلى المضيف'
+      }
+    }
   }
 
   try {
@@ -76,7 +94,21 @@ export async function pingHost(host: string): Promise<PingResult> {
 }
 
 export async function flushDns(): Promise<{ success: boolean; message: string }> {
-  if (!isWindows) return { success: false, message: 'متاح على ويندوز فقط' }
+  if (!isWindows) {
+    try {
+      // مسح ذاكرة DNS على ماك يتطلب صلاحيات، فنمرّ عبر حوار النظام
+      await runWithAdmin('dscacheutil -flushcache; killall -HUP mDNSResponder')
+      return { success: true, message: 'تم مسح ذاكرة DNS المؤقتة' }
+    } catch (err) {
+      const message = (err as Error).message
+      return {
+        success: false,
+        message: /User canceled|-128/i.test(message)
+          ? 'أُلغيت العملية'
+          : message.trim().split('\n')[0]
+      }
+    }
+  }
   try {
     await runPowerShell('ipconfig /flushdns | Out-Null', 20_000)
     return { success: true, message: 'تم مسح ذاكرة DNS المؤقتة' }

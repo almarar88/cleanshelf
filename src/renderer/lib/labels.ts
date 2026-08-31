@@ -11,7 +11,24 @@ export const CLEANER_CATEGORY_LABELS: Record<string, { title: string; desc: stri
   'cleaner.firefoxCache': { title: 'ذاكرة تخزين Firefox المؤقتة', desc: 'يُعاد بناؤها تلقائيًا عند تصفح المواقع' },
   'cleaner.deliveryOptimization': { title: 'ملفات تحسين التسليم', desc: 'أجزاء تحديثات مشتركة بين الأجهزة على الشبكة' },
   'cleaner.minidumps': { title: 'ملفات تفريغ الذاكرة (Minidump)', desc: 'ملفات تشخيص أعطال النظام' },
-  'cleaner.recycleBin': { title: 'سلة المحذوفات', desc: 'إفراغ سلة المحذوفات نهائيًا — غير قابل للتراجع' }
+  'cleaner.recycleBin': { title: 'سلة المحذوفات', desc: 'إفراغ سلة المحذوفات نهائيًا — غير قابل للتراجع' },
+
+  // فئات ماك
+  'cleaner.mac.userCaches': { title: 'ذاكرة التخزين المؤقتة للمستخدم', desc: '~/Library/Caches — تُعاد بناؤها تلقائيًا' },
+  'cleaner.mac.systemCaches': { title: 'ذاكرة التخزين المؤقتة للنظام', desc: '/Library/Caches — تحتاج صلاحيات مرتفعة' },
+  'cleaner.mac.userLogs': { title: 'سجلات التطبيقات', desc: '~/Library/Logs' },
+  'cleaner.mac.trash': { title: 'سلة المهملات', desc: 'إفراغ المهملات نهائيًا — غير قابل للتراجع' },
+  'cleaner.mac.xcodeDerived': { title: 'بيانات Xcode المشتقّة', desc: 'DerivedData — تُعاد بناؤها عند فتح المشروع، غالبًا عدة غيغابايت' },
+  'cleaner.mac.xcodeDeviceSupport': { title: 'ملفات دعم أجهزة Xcode', desc: 'نسخ رموز لإصدارات iOS قديمة — تُنزَّل ثانيةً عند الحاجة' },
+  'cleaner.mac.xcodeArchives': { title: 'أرشيفات Xcode', desc: 'نسخ التطبيقات المؤرشفة للنشر — احذفها إن لم تعد تحتاجها' },
+  'cleaner.mac.homebrew': { title: 'ذاكرة Homebrew', desc: 'حزم منزَّلة سابقًا' },
+  'cleaner.mac.packageManagers': { title: 'ذواكر مديري الحزم', desc: 'npm و Yarn و pnpm و pip و Gradle و CocoaPods' },
+  'cleaner.mac.safariCache': { title: 'ذاكرة Safari', desc: 'يُعاد بناؤها عند التصفح' },
+  'cleaner.mac.mailDownloads': { title: 'مرفقات البريد المؤقتة', desc: 'مرفقات فُتحت من تطبيق Mail' },
+  'cleaner.mac.iosBackups': { title: 'نسخ احتياطية للآيفون/آيباد', desc: 'قد تكون عشرات الغيغابايت — تأكد أن لديك نسخة أخرى قبل الحذف' },
+  'cleaner.mac.crashReports': { title: 'تقارير الأعطال', desc: 'ملفات تشخيص أعطال التطبيقات' },
+  'cleaner.mac.quicklook': { title: 'ذاكرة المعاينة السريعة', desc: 'صور مصغّرة يعيد النظام بناءها' },
+  'cleaner.mac.savedState': { title: 'حالات التطبيقات المحفوظة', desc: 'تُفقد نوافذ التطبيقات المفتوحة سابقًا عند إعادة التشغيل' }
 }
 
 export function categoryLabel(key: string): { title: string; desc: string } {

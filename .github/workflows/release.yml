@@ -1,6 +1,6 @@
 name: Release
 
-# ينشر إصدارًا بملفات exe مرفقة. يُشغَّل بدفع وسم مثل v1.0.0،
+# ينشر إصدارًا بملفات ويندوز وماك. يُشغَّل بدفع وسم مثل v1.0.0،
 # أو يدويًا من تبويب Actions مع تحديد اسم الوسم.
 on:
   push:
@@ -8,16 +8,29 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'اسم الوسم للإصدار (مثال: v1.0.0)'
+        description: 'اسم الوسم للإصدار (مثال: v1.1.0)'
         required: true
-        default: v1.0.0
+        default: v1.1.0
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
+  # يبني كل منصة على نظامها ويرفع الناتج كـ artifact مؤقت
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            build: npm run build:win
+            artifacts: dist/*.exe
+          - os: macos-latest
+            platform: mac
+            build: npm run build:mac
+            artifacts: dist/*.dmg
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,11 +45,12 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Build installer + portable exe
-        run: npm run build:win
+      - name: Build
+        run: ${{ matrix.build }}
 
-      # لا نَنشر تطبيقًا لم نتأكد أنه يُقلع فعلًا
-      - name: Smoke-test the built app
+      # لا نَنشر تطبيقًا لم نتأكد أنه يُقلع على نظامه
+      - name: Smoke-test (Windows)
+        if: matrix.platform == 'windows'
         shell: pwsh
         env:
           CLEANSHELF_SMOKE_TEST: '1'
@@ -46,25 +60,61 @@ jobs:
           $env:CLEANSHELF_SMOKE_LOG = Join-Path $PWD "smoke-log.txt"
           $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow
           $null = $proc.Handle
-          if (-not $proc.WaitForExit(180000)) {
-            $proc.Kill()
-            throw "التطبيق لم ينتهِ خلال 180 ثانية"
-          }
+          if (-not $proc.WaitForExit(180000)) { $proc.Kill(); throw "لم ينتهِ خلال 180 ثانية" }
           if (Test-Path $env:CLEANSHELF_SMOKE_LOG) { Get-Content $env:CLEANSHELF_SMOKE_LOG }
           if ($proc.ExitCode -ne 0) { throw "فشل فحص التشغيل برمز $($proc.ExitCode)" }
 
+      - name: Smoke-test (macOS)
+        if: matrix.platform == 'mac'
+        env:
+          CLEANSHELF_SMOKE_TEST: '1'
+          CLEANSHELF_SMOKE_LOG: smoke-log.txt
+        run: |
+          APP="dist/mac-universal/CleanShelf.app/Contents/MacOS/CleanShelf"
+          if [ ! -f "$APP" ]; then APP="dist/mac/CleanShelf.app/Contents/MacOS/CleanShelf"; fi
+          if [ ! -f "$APP" ]; then echo "لم يُعثر على التطبيق المبني:"; ls -R dist | head -40; exit 1; fi
+          "$APP" & APP_PID=$!
+          ( sleep 180 && kill -9 $APP_PID 2>/dev/null ) & WATCHDOG=$!
+          set +e
+          wait $APP_PID
+          CODE=$?
+          set -e
+          kill -9 $WATCHDOG 2>/dev/null || true
+          [ -f smoke-log.txt ] && cat smoke-log.txt
+          if [ $CODE -ne 0 ]; then echo "فشل فحص التشغيل برمز $CODE"; exit 1; fi
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: ${{ matrix.artifacts }}
+          if-no-files-found: error
+
+  # ينشر بعد نجاح المنصتين معًا، فلا يخرج إصدار ناقص
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build outputs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-files
+
       - name: Publish GitHub Release
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          # يُمرَّر عبر متغيّر بيئة لا داخل السكربت مباشرةً، تفاديًا لحقن الأوامر
           INPUT_TAG: ${{ inputs.tag }}
         run: |
-          $tag = if ($env:INPUT_TAG) { $env:INPUT_TAG } else { $env:GITHUB_REF_NAME }
-          $files = Get-ChildItem dist/*.exe | ForEach-Object { $_.FullName }
-          if ($files.Count -lt 1) { throw "لا توجد ملفات exe للنشر" }
-          gh release create $tag $files `
-            --target $env:GITHUB_SHA `
-            --title "CleanShelf $tag" `
+          TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          ls -la release-files
+          FILES=$(find release-files -type f \( -name '*.exe' -o -name '*.dmg' \))
+          if [ -z "$FILES" ]; then echo "لا توجد ملفات للنشر"; exit 1; fi
+          gh release create "$TAG" $FILES \
+            --target "$GITHUB_SHA" \
+            --title "CleanShelf $TAG" \
             --notes-file .github/release-notes.md
-          Write-Host "تم نشر الإصدار $tag"
+          echo "تم نشر الإصدار $TAG"

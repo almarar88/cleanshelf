@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import { app, BrowserWindow } from 'electron'
 import { getSystemSummary } from './lib/systemInfoLib'
 import { CATEGORY_DEFS, scanCategory } from './lib/cleanerCategories'
@@ -108,9 +109,11 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
   await check('قائمة الأقراص', async () => (await listDrives()).join(' '))
 
   await check('فحص فئة تنظيف', async () => {
-    const def = CATEGORY_DEFS.find((c) => c.id === 'user_temp')!
+    // أول فئة آمنة لا تحتاج صلاحيات — تختلف بين ويندوز وماك
+    const def = CATEGORY_DEFS.find((c) => c.risk === 'safe' && !c.requiresAdmin)
+    if (!def) throw new Error('لا توجد فئات تنظيف لهذه المنصة')
     const result = await scanCategory(def)
-    return `${result.fileCount} ملف / ${result.sizeBytes} بايت`
+    return `${def.id}: ${result.fileCount} ملف / ${result.sizeBytes} بايت`
   })
 
   await check('قائمة البرامج المثبَّتة', async () => {
@@ -138,7 +141,8 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
   await check('محوّلات الشبكة', async () => `${(await listAdapters()).length} محوّل`)
 
   await check('تحليل المساحة', async () => {
-    const result = await analyzeFolder(process.env['TEMP'] || 'C:\\Windows\\Temp')
+    const target = process.platform === 'win32' ? process.env['TEMP'] || 'C:\\Windows\\Temp' : os.tmpdir()
+    const result = await analyzeFolder(target)
     return `${result.children.length} عنصر / ${result.totalBytes} بايت`
   })
 

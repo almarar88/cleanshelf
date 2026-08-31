@@ -1,7 +1,7 @@
 {
   "name": "cleanshelf",
   "productName": "CleanShelf",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "أداة ويندوز لتنظيف الكمبيوتر، إزالة البرامج، إدارة الملفات، وتحرير وسوم ملفات الأغاني",
   "author": {
     "name": "Alcode",
@@ -15,7 +15,8 @@
     "build:win": "electron-vite build && electron-builder --win --x64 --publish never",
     "build:win:portable": "electron-vite build && electron-builder --win portable --x64 --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "build:mac": "electron-vite build && electron-builder --mac --publish never"
   },
   "dependencies": {
     "music-metadata": "^7.14.0",
