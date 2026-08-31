@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import type { AppInfo } from '../../shared/types'
 import type { PageId } from '../App'
 
 interface NavItem {
@@ -37,6 +39,15 @@ export function Sidebar({
   active: PageId
   onNavigate: (id: PageId) => void
 }): JSX.Element {
+  const [info, setInfo] = useState<AppInfo | null>(null)
+
+  useEffect(() => {
+    window.api.system
+      .appInfo()
+      .then(setInfo)
+      .catch(() => setInfo(null))
+  }, [])
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -78,6 +89,11 @@ export function Sidebar({
           <span>{item.label}</span>
         </div>
       ))}
+
+      <div className="sidebar-footer">
+        <div>{info ? `${info.name} ${info.version}` : 'CleanShelf'}</div>
+        <div className="company">من تطوير {info?.company ?? 'Alcode'}</div>
+      </div>
     </aside>
   )
 }

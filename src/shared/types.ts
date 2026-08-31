@@ -13,6 +13,12 @@ export interface CleanerCategory {
   requiresAdmin: boolean
 }
 
+export interface AppInfo {
+  name: string
+  version: string
+  company: string
+}
+
 export interface ProcessEntry {
   pid: number
   name: string

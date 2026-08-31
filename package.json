@@ -1,9 +1,12 @@
 {
   "name": "cleanshelf",
   "productName": "CleanShelf",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "أداة ويندوز لتنظيف الكمبيوتر، إزالة البرامج، إدارة الملفات، وتحرير وسوم ملفات الأغاني",
-  "author": "ideashelf2",
+  "author": {
+    "name": "Alcode",
+    "email": "almarar707@gmail.com"
+  },
   "private": true,
   "main": "out/main/index.js",
   "scripts": {

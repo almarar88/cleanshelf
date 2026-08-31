@@ -1,4 +1,5 @@
-appId: com.cleanshelf.app
+appId: com.alcode.cleanshelf
+copyright: © 2026 Alcode
 productName: CleanShelf
 directories:
   output: dist
@@ -9,6 +10,7 @@ files:
 asar: true
 win:
   icon: build/icon.ico
+  publisherName: Alcode
   target:
     - target: nsis
       arch: [x64]

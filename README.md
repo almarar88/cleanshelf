@@ -1,5 +1,7 @@
 # CleanShelf 🧼 — أداة تنظيف وصيانة ويندوز
 
+<div dir="rtl">من تطوير <strong>Alcode</strong></div>
+
 [![تحميل آخر إصدار](https://img.shields.io/github/v/release/almarar88/cleanshelf?label=%D8%A2%D8%AE%D8%B1%20%D8%A5%D8%B5%D8%AF%D8%A7%D8%B1&style=for-the-badge)](https://github.com/almarar88/cleanshelf/releases/latest)
 
 ## ⬇️ التحميل
@@ -149,3 +151,7 @@ src/
   renderer/   واجهة React (TypeScript)، صفحة لكل أداة
   shared/     أنواع TypeScript مشتركة بين main والواجهة
 ```
+
+---
+
+© 2026 **Alcode** — جميع الحقوق محفوظة.

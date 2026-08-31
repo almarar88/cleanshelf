@@ -20,7 +20,8 @@ import type {
   PingResult,
   DiskUsageResult,
   BrokenShortcut,
-  CleanHistoryEntry
+  CleanHistoryEntry,
+  AppInfo
 } from '../shared/types'
 import type { BatchRenamePlan, BatchRenameResult } from '../main/lib/fileManagerLib'
 
@@ -140,6 +141,7 @@ const api = {
   system: {
     summary: (): Promise<SystemSummary> => ipcRenderer.invoke('system:summary'),
     isAdmin: (): Promise<boolean> => ipcRenderer.invoke('system:isAdmin'),
+    appInfo: (): Promise<AppInfo> => ipcRenderer.invoke('system:appInfo'),
     relaunchAsAdmin: (): Promise<{ started: boolean; message: string }> =>
       ipcRenderer.invoke('system:relaunchAsAdmin')
   },
