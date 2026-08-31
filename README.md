@@ -1,5 +1,25 @@
 # CleanShelf 🧼 — أداة تنظيف وصيانة ويندوز
 
+[![تحميل آخر إصدار](https://img.shields.io/github/v/release/almarar88/cleanshelf?label=%D8%A2%D8%AE%D8%B1%20%D8%A5%D8%B5%D8%AF%D8%A7%D8%B1&style=for-the-badge)](https://github.com/almarar88/cleanshelf/releases/latest)
+
+## ⬇️ التحميل
+
+| | |
+|---|---|
+| **[⬇️ تحميل المثبّت](https://github.com/almarar88/cleanshelf/releases/latest/download/CleanShelf-Setup-1.0.0.exe)** | يثبّت التطبيق وينشئ اختصارات في قائمة ابدأ وسطح المكتب |
+| **[⬇️ تحميل النسخة المحمولة](https://github.com/almarar88/cleanshelf/releases/latest/download/CleanShelf-Portable-1.0.0.exe)** | تعمل مباشرة بلا تثبيت |
+
+أو تصفّح [صفحة الإصدارات](https://github.com/almarar88/cleanshelf/releases/latest) لاختيار ملف بنفسك.
+
+**المتطلبات:** ويندوز 10 أو 11، 64-بت.
+
+> ⚠️ **تنبيه متوقّع:** التطبيق غير موقَّع رقميًا (التوقيع يتطلب شهادة مدفوعة سنويًا)،
+> لذا سيعرض ويندوز شاشة `Windows protected your PC`. للمتابعة اضغط **More info**
+> ثم **Run anyway**. وقد يعترض مضاد الفيروسات لأن التطبيق بطبيعته يحذف ملفات
+> مؤقتة ويقرأ سجل النظام.
+
+---
+
 تطبيق سطح مكتب لويندوز (Electron + TypeScript + React) يجمع أربع أدوات في تطبيق واحد:
 
 - **🧹 منظّف القرص** — فحص وحذف الملفات المؤقتة، ذاكرة تخزين المتصفحات، ملفات
