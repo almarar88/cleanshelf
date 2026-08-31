@@ -14,7 +14,7 @@ win:
       arch: [x64]
     - target: portable
       arch: [x64]
-  artifactName: '${productName}-${version}-${arch}.${ext}'
+  artifactName: '${productName}-${arch}.${ext}'
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -23,6 +23,7 @@ nsis:
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
   installerHeaderIcon: build/icon.ico
-  artifactName: '${productName}-Setup-${version}.${ext}'
+  # بلا رقم إصدار في الاسم، ليبقى رابط /releases/latest/download ثابتًا عبر الإصدارات
+  artifactName: '${productName}-Setup.${ext}'
 portable:
-  artifactName: '${productName}-Portable-${version}.${ext}'
+  artifactName: '${productName}-Portable.${ext}'

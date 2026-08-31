@@ -6,8 +6,8 @@
 
 | | |
 |---|---|
-| **[⬇️ تحميل المثبّت](https://github.com/almarar88/cleanshelf/releases/latest/download/CleanShelf-Setup-1.0.0.exe)** | يثبّت التطبيق وينشئ اختصارات في قائمة ابدأ وسطح المكتب |
-| **[⬇️ تحميل النسخة المحمولة](https://github.com/almarar88/cleanshelf/releases/latest/download/CleanShelf-Portable-1.0.0.exe)** | تعمل مباشرة بلا تثبيت |
+| **[⬇️ تحميل المثبّت](https://github.com/almarar88/cleanshelf/releases/latest/download/CleanShelf-Setup.exe)** | يثبّت التطبيق وينشئ اختصارات في قائمة ابدأ وسطح المكتب |
+| **[⬇️ تحميل النسخة المحمولة](https://github.com/almarar88/cleanshelf/releases/latest/download/CleanShelf-Portable.exe)** | تعمل مباشرة بلا تثبيت |
 
 أو تصفّح [صفحة الإصدارات](https://github.com/almarar88/cleanshelf/releases/latest) لاختيار ملف بنفسك.
 
@@ -97,8 +97,8 @@ npm run dev
 يعمل ملف `.github/workflows/build.yml` تلقائيًا على عامل
 `windows-latest` وينتج:
 
-- `CleanShelf-Setup-<version>.exe` — مثبّت NSIS عادي.
-- `CleanShelf-Portable-<version>.exe` — نسخة محمولة بدون تثبيت.
+- `CleanShelf-Setup.exe` — مثبّت NSIS عادي.
+- `CleanShelf-Portable.exe` — نسخة محمولة بدون تثبيت.
 
 يمكن تنزيلهما من تبويب **Actions** في المستودع، من قسم "Artifacts" لتشغيلة
 البناء. يمكن أيضًا تشغيل البناء يدويًا من نفس التبويب عبر "Run workflow".
