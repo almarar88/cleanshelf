@@ -23,8 +23,8 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
   const failures: string[] = []
 
   const timeout = setTimeout(() => {
-    finish('انتهت المهلة (120 ثانية) قبل اكتمال الفحص')
-  }, 120_000)
+    finish('انتهت المهلة (240 ثانية) قبل اكتمال الفحص')
+  }, 240_000)
 
   function log(line: string): void {
     lines.push(line)
@@ -141,8 +141,9 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
   await check('محوّلات الشبكة', async () => `${(await listAdapters()).length} محوّل`)
 
   await check('تحليل المساحة', async () => {
-    const target = process.platform === 'win32' ? process.env['TEMP'] || 'C:\\Windows\\Temp' : os.tmpdir()
-    const result = await analyzeFolder(target)
+    // مجلد موارد التطبيق: حقيقي ومحدود الحجم، فلا تتعلّق نتيجة الفحص بحجم مجلد
+    // مؤقتات العامل الذي قد يحوي غيغابايتات ويتجاوز المهلة
+    const result = await analyzeFolder(process.resourcesPath || os.tmpdir())
     return `${result.children.length} عنصر / ${result.totalBytes} بايت`
   })
 

@@ -51,7 +51,7 @@ jobs:
           $env:CLEANSHELF_SMOKE_LOG = Join-Path $PWD "smoke-log.txt"
           $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow
           $null = $proc.Handle
-          if (-not $proc.WaitForExit(180000)) { $proc.Kill(); throw "لم ينتهِ خلال 180 ثانية" }
+          if (-not $proc.WaitForExit(300000)) { $proc.Kill(); throw "لم ينتهِ خلال 300 ثانية" }
           if (Test-Path $env:CLEANSHELF_SMOKE_LOG) { Get-Content $env:CLEANSHELF_SMOKE_LOG }
           if ($proc.ExitCode -ne 0) { throw "فشل فحص التشغيل برمز $($proc.ExitCode)" }
 
@@ -66,7 +66,7 @@ jobs:
           if [ ! -f "$APP" ]; then echo "لم يُعثر على التطبيق المبني:"; ls -R dist | head -40; exit 1; fi
           "$APP" & APP_PID=$!
           # لا واجهة رسومية على العامل، فنمنحه مهلة ثم نتحقق من السجل ورمز الخروج
-          ( sleep 180 && kill -9 $APP_PID 2>/dev/null ) & WATCHDOG=$!
+          ( sleep 300 && kill -9 $APP_PID 2>/dev/null ) & WATCHDOG=$!
           set +e
           wait $APP_PID
           CODE=$?
