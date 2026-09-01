@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { LargeFileEntry, ScanProgress } from '../../shared/types'
 import { ScanProgressPanel } from '../components/ScanProgressPanel'
 import { formatBytes } from '../lib/format'
@@ -67,7 +68,7 @@ export function LargeFiles(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickAndScan} disabled={scanning}>
-          📂 اختر مجلدًا
+          <Icon name="folderOpen" size={15} /> اختر مجلدًا
         </button>
         <select
           value={threshold}
@@ -98,7 +99,7 @@ export function LargeFiles(): JSX.Element {
       <div className="card">
         {files.length === 0 ? (
           <div className="empty-state">
-            <div style={{ fontSize: 32 }}>📦</div>
+            <div className="tile-icon tone-orange"><Icon name="package" size={26} /></div>
             <div>اختر مجلدًا لعرض أكبر الملفات فيه</div>
           </div>
         ) : (

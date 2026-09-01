@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { DiskUsageResult, ScanProgress, FolderUsage } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
@@ -53,7 +54,7 @@ export function DiskAnalyzer(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickAndAnalyze} disabled={scanning}>
-          📂 اختر مجلدًا أو قرصًا
+          <Icon name="folderOpen" size={15} /> اختر مجلدًا أو قرصًا
         </button>
         {result && (
           <>
@@ -62,7 +63,7 @@ export function DiskAnalyzer(): JSX.Element {
               disabled={!result.parent || scanning}
               onClick={() => result.parent && analyze(result.parent)}
             >
-              ⬆️ للأعلى
+              <Icon name="arrowUp" size={15} /> للأعلى
             </button>
             <span className="muted" style={{ direction: 'ltr' }}>
               {result.root}
@@ -77,7 +78,7 @@ export function DiskAnalyzer(): JSX.Element {
         <ScanProgressPanel progress={progress} onCancel={() => window.api.fm.cancelScan()} />
       ) : !result ? (
         <div className="empty-state">
-          <div style={{ fontSize: 32 }}>📊</div>
+          <div className="tile-icon tone-cyan"><Icon name="activity" size={26} /></div>
           <div>اختر مجلدًا لترى أين تذهب مساحة القرص بالضبط</div>
         </div>
       ) : result.children.length === 0 ? (
@@ -106,7 +107,7 @@ export function DiskAnalyzer(): JSX.Element {
                       style={{ cursor: item.isDirectory ? 'pointer' : 'default', fontWeight: 600 }}
                       onClick={() => item.isDirectory && analyze(item.path)}
                     >
-                      {item.isDirectory ? '📁' : '📄'} {item.name}
+                      <Icon name={item.isDirectory ? 'folder' : 'file'} size={15} /> {item.name}
                     </td>
                     <td>
                       <div className="progress-bar" style={{ minWidth: 100 }}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { StartupItem } from '../../shared/types'
 import { useToast } from '../lib/toastContext'
 
@@ -63,7 +64,7 @@ export function Startup(): JSX.Element {
         <span className="muted">{loading ? 'جارٍ التحميل…' : `${items.length} عنصر`}</span>
         <div className="spacer" />
         <button className="btn" onClick={load} disabled={loading}>
-          🔄 تحديث
+          <Icon name="refresh" size={15} /> تحديث
         </button>
       </div>
 

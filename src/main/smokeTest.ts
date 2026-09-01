@@ -12,6 +12,9 @@ import { listServices } from './lib/servicesLib'
 import { listAdapters } from './lib/networkLib'
 import { analyzeFolder } from './lib/diskAnalyzerLib'
 import { readHistory } from './lib/historyLib'
+import { readSettings } from './lib/settingsLib'
+import { scanBrowserData } from './lib/privacyLib'
+import { findOldDownloads } from './lib/downloadsLib'
 
 /**
  * فحص تشغيل سريع للنسخة المبنية: يتأكد أن النافذة تُحمَّل فعلًا، وأن جسر
@@ -148,6 +151,26 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
   })
 
   await check('سجل التنظيف', async () => `${(await readHistory()).length} قيد`)
+
+  await check('الإعدادات', async () => {
+    const s = await readSettings()
+    return `سمة ${s.theme}، صبغة ${s.accentHue}`
+  })
+
+  await check('بيانات المتصفحات', async () => `${(await scanBrowserData()).length} عنصر`)
+
+  await check('التنزيلات القديمة', async () => `${(await findOldDownloads(30)).length} عنصر`)
+
+  // 4) الواجهة الجديدة: لوحة الأوامر وزر البحث والإعدادات وصلت للشاشة
+  await check('عناصر الواجهة الجديدة', async () =>
+    retry(async () => {
+      const found = await win.webContents.executeJavaScript(
+        '[!!document.querySelector(".search-trigger"), !!document.querySelector(".hero"), !!document.querySelector(".brand-badge svg")].join(",")'
+      )
+      if (found !== 'true,true,true') throw new Error(`عناصر ناقصة: ${found}`)
+      return 'زر البحث، بطاقة الصحة، وشعار SVG'
+    })
+  )
 
   finish()
 }

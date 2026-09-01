@@ -236,3 +236,104 @@ export interface SystemSummary {
 }
 
 export type ProgressListener<T> = (payload: T) => void
+
+// ---------- الإعدادات ----------
+
+export interface AppSettings {
+  theme: 'system' | 'light' | 'dark'
+  /** صبغة لون التمييز بدرجات HSL */
+  accentHue: number
+  minimizeToTray: boolean
+  launchAtLogin: boolean
+  notifications: boolean
+  /** فحص منظّف القرص تلقائيًا عند فتح الرئيسية */
+  scanOnLaunch: boolean
+  /** عمر الملف بالأيام ليُعدّ "تنزيلًا قديمًا" */
+  oldDownloadDays: number
+  /** عدد مرات الكتابة فوق الملف في الممزّق الآمن */
+  shredPasses: number
+}
+
+// ---------- صحة الجهاز ----------
+
+export interface HealthFactor {
+  id: string
+  label: string
+  status: 'good' | 'warn' | 'bad'
+  detail: string
+  /** صفحة تعالج هذا العامل، إن وُجدت */
+  page?: string
+}
+
+export interface HealthReport {
+  score: number
+  factors: HealthFactor[]
+  cleanableBytes: number
+  safeCleanableBytes: number
+  startupCount: number
+  diskFreePercent: number
+  memUsedPercent: number
+  lastCleanDaysAgo: number | null
+}
+
+export interface SmartCleanResult {
+  freedBytes: number
+  categoryIds: string[]
+}
+
+// ---------- خصوصية المتصفح ----------
+
+export type BrowserDataKind = 'history' | 'cookies' | 'sessions' | 'formdata'
+
+export interface BrowserDataItem {
+  id: string
+  browser: string
+  profile: string
+  kind: BrowserDataKind
+  paths: string[]
+  sizeBytes: number
+  risk: 'safe' | 'caution'
+}
+
+export interface BrowserClearResult {
+  id: string
+  success: boolean
+  freedBytes: number
+  error?: string
+}
+
+// ---------- الممزّق الآمن ----------
+
+export interface ShredProgress {
+  path: string
+  pass: number
+  totalPasses: number
+  /** عدد الملفات المنتهية من الإجمالي */
+  done: number
+  total: number
+}
+
+export interface ShredResult {
+  path: string
+  success: boolean
+  error?: string
+}
+
+// ---------- التنزيلات القديمة ----------
+
+export interface OldDownload {
+  path: string
+  name: string
+  isDirectory: boolean
+  sizeBytes: number
+  modifiedAt: string
+  ageDays: number
+  extension: string
+}
+
+// ---------- تقرير النظام ----------
+
+export interface SystemReport {
+  generatedAt: string
+  markdown: string
+}

@@ -20,6 +20,14 @@ export function registerDialogIpc(): void {
     return result.filePaths[0]
   })
 
+  ipcMain.handle('dialog:pickFiles', async (event): Promise<string[]> => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(win ?? undefined!, {
+      properties: ['openFile', 'multiSelections']
+    })
+    return result.canceled ? [] : result.filePaths
+  })
+
   ipcMain.handle(
     'dialog:confirm',
     async (event, message: string, detail?: string): Promise<boolean> => {

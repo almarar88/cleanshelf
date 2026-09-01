@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { CleanHistoryEntry } from '../../shared/types'
 import { formatBytes, formatDate } from '../lib/format'
 import { categoryTitleById } from '../lib/labels'
@@ -61,7 +62,7 @@ export function History(): JSX.Element {
 
       {entries.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: 32 }}>🧾</div>
+          <div className="tile-icon tone-green"><Icon name="history" size={26} /></div>
           <div>لم تُنفَّذ أي عملية تنظيف بعد</div>
         </div>
       ) : (

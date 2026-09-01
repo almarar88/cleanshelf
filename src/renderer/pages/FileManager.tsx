@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon, type IconName } from '../components/Icon'
 import type { DirListing, FileEntry, LargeFileEntry, ScanProgress } from '../../shared/types'
 import { ScanProgressPanel } from '../components/ScanProgressPanel'
 import { formatBytes, formatDate } from '../lib/format'
@@ -6,17 +7,17 @@ import { useToast } from '../lib/toastContext'
 import { BatchRenameModal } from '../components/BatchRenameModal'
 import { InputModal } from '../components/InputModal'
 
-function extIcon(entry: FileEntry): string {
-  if (entry.isDirectory) return '📁'
+function extIcon(entry: FileEntry): IconName {
+  if (entry.isDirectory) return 'folder'
   const audio = ['mp3', 'flac', 'wav', 'm4a', 'ogg', 'aac', 'wma']
   const image = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
   const archive = ['zip', 'rar', '7z']
   const ext = entry.extension.toLowerCase()
-  if (audio.includes(ext)) return '🎵'
-  if (image.includes(ext)) return '🖼️'
-  if (archive.includes(ext)) return '🗜️'
-  if (ext === 'exe' || ext === 'msi') return '⚙️'
-  return '📄'
+  if (audio.includes(ext)) return 'music'
+  if (image.includes(ext)) return 'image'
+  if (archive.includes(ext)) return 'archive'
+  if (ext === 'exe' || ext === 'msi' || ext === 'dmg' || ext === 'pkg' || ext === 'app') return 'cog'
+  return 'file'
 }
 
 export function FileManager(): JSX.Element {
@@ -123,20 +124,20 @@ export function FileManager(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn" disabled={!listing?.parent} onClick={() => open(listing!.parent)}>
-          ⬆️ للأعلى
+          <Icon name="arrowUp" size={15} /> للأعلى
         </button>
         <button className="btn" disabled={!listing?.path} onClick={() => setShowNewFolder(true)}>
-          ➕ مجلد جديد
+          <Icon name="plus" size={15} /> مجلد جديد
         </button>
         <button className="btn" disabled={selected.size === 0} onClick={handleDelete}>
-          🗑️ نقل إلى سلة المحذوفات
+          <Icon name="trash" size={15} /> نقل إلى سلة المحذوفات
         </button>
         <button
           className="btn"
           disabled={selectedFileEntries.length === 0}
           onClick={() => setShowBatchRename(true)}
         >
-          🔤 إعادة تسمية دفعية
+          <Icon name="type" size={15} /> إعادة تسمية دفعية
         </button>
         <div className="spacer" />
         <input
@@ -153,11 +154,11 @@ export function FileManager(): JSX.Element {
           onClick={runSearch}
           disabled={!listing?.path || !searchQuery.trim() || searching}
         >
-          🔍 بحث
+          <Icon name="search" size={15} /> بحث
         </button>
         {searchResults && (
           <button className="btn btn-sm btn-ghost" onClick={() => setSearchResults(null)}>
-            ✕ إلغاء نتائج البحث
+            <Icon name="x" size={14} /> إلغاء نتائج البحث
           </button>
         )}
         <span className="muted">{selected.size > 0 ? `محدَّد: ${selected.size}` : ''}</span>
@@ -224,7 +225,7 @@ export function FileManager(): JSX.Element {
           <div style={{ padding: 16 }} className="grid grid-4">
             {(listing?.drives || []).map((d) => (
               <div key={d} className="card card-pad" style={{ cursor: 'pointer' }} onClick={() => open(d)}>
-                💽 {d}
+                <Icon name="hardDrive" size={16} /> {d}
               </div>
             ))}
           </div>
@@ -257,7 +258,7 @@ export function FileManager(): JSX.Element {
                       entry.isDirectory ? open(entry.path) : window.api.fm.openPath(entry.path)
                     }
                   >
-                    {extIcon(entry)} {entry.name}
+                    <Icon name={extIcon(entry)} size={15} /> {entry.name}
                   </td>
                   <td>{entry.isDirectory ? '—' : formatBytes(entry.sizeBytes)}</td>
                   <td className="muted">{formatDate(entry.modifiedAt)}</td>

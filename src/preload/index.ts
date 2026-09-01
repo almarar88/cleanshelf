@@ -24,7 +24,16 @@ import type {
   AppInfo,
   OrphanLeftover,
   LanguageFileGroup,
-  PlatformInfo
+  PlatformInfo,
+  AppSettings,
+  HealthReport,
+  SmartCleanResult,
+  BrowserDataItem,
+  BrowserClearResult,
+  ShredProgress,
+  ShredResult,
+  OldDownload,
+  SystemReport
 } from '../shared/types'
 import type { BatchRenamePlan, BatchRenameResult } from '../main/lib/fileManagerLib'
 
@@ -33,6 +42,7 @@ const api = {
     scan: (): Promise<CleanerScanResult> => ipcRenderer.invoke('cleaner:scan'),
     clean: (categoryIds: string[]): Promise<{ totalFreedBytes: number }> =>
       ipcRenderer.invoke('cleaner:clean', categoryIds),
+    smartClean: (): Promise<SmartCleanResult> => ipcRenderer.invoke('cleaner:smartClean'),
     onProgress: (listener: (p: CleanProgress) => void) => {
       const handler = (_e: Electron.IpcRendererEvent, p: CleanProgress): void => listener(p)
       ipcRenderer.on('cleaner:progress', handler)
@@ -158,8 +168,53 @@ const api = {
     relaunchAsAdmin: (): Promise<{ started: boolean; message: string }> =>
       ipcRenderer.invoke('system:relaunchAsAdmin')
   },
+  settings: {
+    get: (): Promise<AppSettings> => ipcRenderer.invoke('settings:get'),
+    set: (patch: Partial<AppSettings>): Promise<AppSettings> => ipcRenderer.invoke('settings:set', patch)
+  },
+  health: {
+    compute: (): Promise<HealthReport> => ipcRenderer.invoke('health:compute')
+  },
+  privacy: {
+    scan: (): Promise<BrowserDataItem[]> => ipcRenderer.invoke('privacy:scan'),
+    clear: (items: BrowserDataItem[]): Promise<BrowserClearResult[]> =>
+      ipcRenderer.invoke('privacy:clear', items)
+  },
+  shred: {
+    run: (paths: string[], passes: number): Promise<ShredResult[]> =>
+      ipcRenderer.invoke('shred:run', paths, passes),
+    cancel: (): Promise<void> => ipcRenderer.invoke('shred:cancel'),
+    onProgress: (listener: (p: ShredProgress) => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, p: ShredProgress): void => listener(p)
+      ipcRenderer.on('shred:progress', handler)
+      return (): void => {
+        ipcRenderer.removeListener('shred:progress', handler)
+      }
+    }
+  },
+  downloads: {
+    findOld: (days: number): Promise<OldDownload[]> => ipcRenderer.invoke('downloads:findOld', days),
+    path: (): Promise<string> => ipcRenderer.invoke('downloads:path')
+  },
+  report: {
+    build: (): Promise<SystemReport> => ipcRenderer.invoke('report:build'),
+    save: (markdown: string): Promise<{ saved: boolean; path?: string }> =>
+      ipcRenderer.invoke('report:save', markdown)
+  },
+  app: {
+    openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:openExternal', url),
+    /** أوامر قادمة من العملية الرئيسية (شريط النظام مثلاً) */
+    onCommand: (listener: (command: string) => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, command: string): void => listener(command)
+      ipcRenderer.on('app:command', handler)
+      return (): void => {
+        ipcRenderer.removeListener('app:command', handler)
+      }
+    }
+  },
   dialogs: {
     pickFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:pickFolder'),
+    pickFiles: (): Promise<string[]> => ipcRenderer.invoke('dialog:pickFiles'),
     pickImageFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:pickImageFile'),
     confirm: (message: string, detail?: string): Promise<boolean> =>
       ipcRenderer.invoke('dialog:confirm', message, detail)

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { DuplicateGroup, ScanProgress } from '../../shared/types'
 import { ScanProgressPanel } from '../components/ScanProgressPanel'
 import { formatBytes } from '../lib/format'
@@ -79,7 +80,7 @@ export function Duplicates(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickAndScan} disabled={scanning}>
-          📂 اختر مجلدًا وابحث عن التكرارات
+          <Icon name="folderOpen" size={15} /> اختر مجلدًا وابحث عن التكرارات
         </button>
         {folder && <span className="muted">{folder}</span>}
         <div className="spacer" />
@@ -100,7 +101,7 @@ export function Duplicates(): JSX.Element {
         <ScanProgressPanel progress={progress} onCancel={cancelScan} />
       ) : groups.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: 32 }}>🧬</div>
+          <div className="tile-icon tone-pink"><Icon name="copy" size={26} /></div>
           <div>اختر مجلدًا لبدء البحث عن الملفات المكرّرة</div>
         </div>
       ) : (

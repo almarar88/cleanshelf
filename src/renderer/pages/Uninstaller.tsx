@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { InstalledApp, LeftoverItem } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
@@ -96,7 +97,7 @@ export function Uninstaller(): JSX.Element {
         <span className="muted">{loading ? 'جارٍ التحميل…' : `${filtered.length} برنامج`}</span>
         <div className="spacer" />
         <button className="btn" onClick={load} disabled={loading}>
-          🔄 تحديث
+          <Icon name="refresh" size={15} /> تحديث
         </button>
       </div>
 

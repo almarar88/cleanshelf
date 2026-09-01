@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { NetworkAdapter, NetworkConnection, PingResult } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
@@ -56,10 +57,10 @@ export function Network(): JSX.Element {
         </span>
         <div className="spacer" />
         <button className="btn btn-sm" onClick={flushDns}>
-          🧽 مسح ذاكرة DNS
+          <Icon name="sparkles" size={15} /> مسح ذاكرة DNS
         </button>
         <button className="btn btn-sm" onClick={load}>
-          🔄 تحديث
+          <Icon name="refresh" size={15} /> تحديث
         </button>
       </div>
 

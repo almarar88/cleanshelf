@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { CleanerCategory, CleanProgress } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { categoryLabel } from '../lib/labels'
@@ -94,7 +95,7 @@ export function Cleaner(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn" onClick={scan} disabled={loading || cleaning}>
-          🔄 إعادة الفحص
+          <Icon name="refresh" size={15} /> إعادة الفحص
         </button>
         <span className="muted">
           {loading ? 'جارٍ الفحص…' : `${categories.length} فئة، الإجمالي القابل للتنظيف ${formatBytes(
@@ -110,7 +111,7 @@ export function Cleaner(): JSX.Element {
           disabled={selected.size === 0 || cleaning || loading}
           onClick={() => setShowConfirm(true)}
         >
-          {cleaning ? 'جارٍ التنظيف…' : '🧹 تنظيف المحدَّد'}
+          <Icon name="sparkles" size={15} /> {cleaning ? 'جارٍ التنظيف…' : 'تنظيف المحدَّد'}
         </button>
       </div>
 
@@ -119,7 +120,7 @@ export function Cleaner(): JSX.Element {
           className="card card-pad"
           style={{ marginBottom: 16, borderRight: '3px solid var(--warning)' }}
         >
-          <strong>🛡️ بعض الفئات تحتاج صلاحيات مرتفعة</strong>
+          <strong><Icon name="shield" size={14} /> بعض الفئات تحتاج صلاحيات مرتفعة</strong>
           <div className="muted" style={{ fontSize: 13, margin: '6px 0 10px' }}>
             الفئات التالية داخل مجلدات يملكها النظام، ولن يُحذف منها شيء بالصلاحيات الحالية:{' '}
             {adminCategoriesWithData.map((c) => categoryLabel(c.labelKey).title).join('، ')}.
@@ -164,7 +165,7 @@ export function Cleaner(): JSX.Element {
                       {cat.risk === 'caution' && <span className="badge badge-caution">انتبه</span>}{' '}
                       {cat.requiresAdmin && !isAdmin && (
                         <span className="badge badge-caution" title="يحتاج تشغيل التطبيق كمسؤول">
-                          🛡️ مدير
+                          <Icon name="shield" /> مدير
                         </span>
                       )}
                     </div>
@@ -208,7 +209,7 @@ export function Cleaner(): JSX.Element {
             </p>
             {hasCautionSelected && (
               <p style={{ color: 'var(--warning)' }}>
-                ⚠️ اخترت فئات مُعلَّمة "انتبه" — تأكد من فهم تأثيرها قبل المتابعة.
+                <Icon name="alert" size={15} /> اخترت فئات مُعلَّمة "انتبه" — تأكد من فهم تأثيرها قبل المتابعة.
               </p>
             )}
             <label className="checkbox-row" style={{ fontSize: 13, marginTop: 10 }}>

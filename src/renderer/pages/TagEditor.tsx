@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { AudioTag } from '../../shared/types'
 import { formatDuration } from '../lib/format'
 import { useToast } from '../lib/toastContext'
@@ -121,7 +122,7 @@ export function TagEditor(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickFolder} disabled={loading}>
-          📂 اختر مجلد أغاني
+          <Icon name="folderOpen" size={15} /> اختر مجلد أغاني
         </button>
         {folder && <span className="muted">{folder}</span>}
         <div className="spacer" />
@@ -134,7 +135,7 @@ export function TagEditor(): JSX.Element {
 
       {files.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: 32 }}>🎵</div>
+          <div className="tile-icon tone-violet"><Icon name="music" size={26} /></div>
           <div>{loading ? 'جارٍ القراءة…' : 'اختر مجلدًا يحتوي على ملفات صوتية لعرض وتحرير وسومها'}</div>
         </div>
       ) : (
@@ -200,13 +201,13 @@ export function TagEditor(): JSX.Element {
 
                 <div className="toolbar" style={{ marginTop: 10 }}>
                   <button className="btn btn-sm" onClick={pickCover}>
-                    🖼️ تغيير الغلاف
+                    <Icon name="image" size={15} /> تغيير الغلاف
                   </button>
                   {coverPath && <span className="muted" style={{ fontSize: 12 }}>سيتم استخدام الصورة المختارة</span>}
                 </div>
 
                 <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={save} disabled={saving}>
-                  {saving ? 'جارٍ الحفظ…' : '💾 حفظ الوسوم'}
+                  <Icon name="save" size={15} /> {saving ? 'جارٍ الحفظ…' : 'حفظ الوسوم'}
                 </button>
                 <p className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
                   الحفظ بالكتابة مدعوم حاليًا لملفات MP3 فقط.

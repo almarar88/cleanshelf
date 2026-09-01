@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { BrokenShortcut, ScanProgress } from '../../shared/types'
 import { useToast } from '../lib/toastContext'
 import { ScanProgressPanel } from '../components/ScanProgressPanel'
@@ -91,7 +92,7 @@ export function CleanupExtras(): JSX.Element {
           <option value="shortcuts">الاختصارات المعطوبة</option>
         </select>
         <button className="btn btn-primary" onClick={pickAndScan} disabled={scanning}>
-          📂 اختر مجلدًا وافحص
+          <Icon name="folderOpen" size={15} /> اختر مجلدًا وافحص
         </button>
         {folder && (
           <span className="muted" style={{ direction: 'ltr' }}>
@@ -118,7 +119,7 @@ export function CleanupExtras(): JSX.Element {
         <ScanProgressPanel progress={progress} onCancel={() => window.api.fm.cancelScan()} />
       ) : items.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: 32 }}>{mode === 'empty' ? '🗂️' : '🔗'}</div>
+          <div className="tile-icon tone-amber"><Icon name={mode === 'empty' ? 'folder' : 'link'} size={26} /></div>
           <div>
             {mode === 'empty'
               ? 'اختر مجلدًا للبحث عن المجلدات الفارغة تمامًا'

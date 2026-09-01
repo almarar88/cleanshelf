@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { ProcessEntry } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
@@ -85,7 +86,7 @@ export function Processes(): JSX.Element {
           {loading ? 'جارٍ التحميل…' : `${visible.length} عملية — ${formatBytes(totalMemory)}`}
         </span>
         <button className="btn btn-sm" onClick={load}>
-          🔄 تحديث
+          <Icon name="refresh" size={15} /> تحديث
         </button>
       </div>
 

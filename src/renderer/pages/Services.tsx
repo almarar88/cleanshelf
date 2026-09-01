@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { ServiceEntry } from '../../shared/types'
 import { useToast } from '../lib/toastContext'
 
@@ -93,13 +94,14 @@ export function Services(): JSX.Element {
         <div className="spacer" />
         <span className="muted">{loading ? 'جارٍ التحميل…' : `${visible.length} خدمة`}</span>
         <button className="btn btn-sm" onClick={load}>
-          🔄 تحديث
+          <Icon name="refresh" size={15} /> تحديث
         </button>
       </div>
 
-      <div className="card card-pad" style={{ marginBottom: 16, fontSize: 13 }}>
-        ⚠️ تشغيل الخدمات وإيقافها يتطلب صلاحيات مرتفعة. الخدمات جزء من عمل النظام الداخلي
-        (خدمات ويندوز أو وظائف launchd على ماك)، فلا توقف خدمة لا تعرف وظيفتها.
+      <div className="notice notice-warn">
+        <Icon name="alert" size={17} />
+        <div>تشغيل الخدمات وإيقافها يتطلب صلاحيات مرتفعة. الخدمات جزء من عمل النظام الداخلي
+        (خدمات ويندوز أو وظائف launchd على ماك)، فلا توقف خدمة لا تعرف وظيفتها.</div>
       </div>
 
       <div className="card">

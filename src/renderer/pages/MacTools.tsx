@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import type { OrphanLeftover, LanguageFileGroup, ScanProgress } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
@@ -102,11 +103,11 @@ export function MacTools(): JSX.Element {
           <option value="languages">ملفات اللغات غير المستخدمة</option>
         </select>
         <button className="btn btn-primary" onClick={() => scan(mode)} disabled={scanning}>
-          🔍 ابدأ الفحص
+          <Icon name="search" size={15} /> ابدأ الفحص
         </button>
         <div className="spacer" />
         <button className="btn btn-sm" onClick={purge}>
-          🧠 تحرير الذاكرة
+          <Icon name="brain" size={15} /> تحرير الذاكرة
         </button>
         {items.length > 0 && (
           <button className="btn btn-danger" disabled={checked.size === 0} onClick={deleteChecked}>
@@ -125,7 +126,7 @@ export function MacTools(): JSX.Element {
         <ScanProgressPanel progress={progress} onCancel={() => window.api.mac.cancelScan()} />
       ) : items.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: 32 }}>{mode === 'orphans' ? '🧹' : '🌐'}</div>
+          <div className="tile-icon tone-teal"><Icon name={mode === 'orphans' ? 'sparkles' : 'globe'} size={26} /></div>
           <div>اضغط "ابدأ الفحص" لبدء البحث</div>
         </div>
       ) : (
