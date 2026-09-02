@@ -17,13 +17,17 @@
   --bg: #f3f5f9;
   --bg-elevated: #ffffff;
   --bg-sunken: #eaeef4;
-  --bg-sidebar: #0d1424;
-  --bg-sidebar-2: #131c31;
+  --bg-sidebar: #ffffff;
+  --bg-sidebar-2: #f7f9fc;
+  --sidebar-border: #e3e8ef;
+  --sidebar-hover: rgba(15, 23, 42, 0.05);
+  --sidebar-glow-opacity: 0.35;
   --text: #16202e;
   --text-muted: #667286;
   --text-faint: #98a3b5;
-  --text-on-sidebar: #b7c2d3;
-  --text-on-sidebar-active: #ffffff;
+  --text-on-sidebar: #4b566a;
+  --text-on-sidebar-active: #16202e;
+  --brand-text: #16202e;
   --border: #e3e8ef;
   --border-strong: #cfd6e0;
 
@@ -51,6 +55,12 @@
   --bg-sunken: #0f1520;
   --bg-sidebar: #070a12;
   --bg-sidebar-2: #0d1220;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-glow-opacity: 0.6;
+  --text-on-sidebar: #b7c2d3;
+  --text-on-sidebar-active: #ffffff;
+  --brand-text: #ffffff;
   --text: #e8edf5;
   --text-muted: #8f9bb0;
   --text-faint: #5c6880;
@@ -76,6 +86,12 @@
     --bg-sunken: #0f1520;
     --bg-sidebar: #070a12;
     --bg-sidebar-2: #0d1220;
+    --sidebar-border: rgba(255, 255, 255, 0.06);
+    --sidebar-hover: rgba(255, 255, 255, 0.06);
+    --sidebar-glow-opacity: 0.6;
+    --text-on-sidebar: #b7c2d3;
+    --text-on-sidebar-active: #ffffff;
+    --brand-text: #ffffff;
     --text: #e8edf5;
     --text-muted: #8f9bb0;
     --text-faint: #5c6880;
@@ -164,6 +180,7 @@ textarea {
 .sidebar {
   position: relative;
   background: linear-gradient(180deg, var(--bg-sidebar-2) 0%, var(--bg-sidebar) 100%);
+  border-inline-start: 1px solid var(--sidebar-border);
   color: var(--text-on-sidebar);
   padding: 20px 14px 14px;
   display: flex;
@@ -182,7 +199,7 @@ textarea {
   height: 260px;
   background: radial-gradient(circle, var(--accent-glow), transparent 65%);
   pointer-events: none;
-  opacity: 0.6;
+  opacity: var(--sidebar-glow-opacity);
 }
 
 .brand {
@@ -191,7 +208,7 @@ textarea {
   align-items: center;
   gap: 12px;
   padding: 4px 8px 22px;
-  color: #fff;
+  color: var(--brand-text);
   font-weight: 700;
   font-size: 17px;
   letter-spacing: -0.01em;
@@ -243,8 +260,8 @@ textarea {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: var(--sidebar-hover);
+  color: var(--text-on-sidebar-active);
 }
 
 .nav-item:hover svg {
@@ -298,14 +315,14 @@ textarea {
   position: relative;
   margin-top: auto;
   padding: 14px 10px 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--sidebar-border);
   font-size: 11.5px;
   color: var(--text-faint);
   line-height: 1.7;
 }
 
 .sidebar-footer .company {
-  color: #94a3b8;
+  color: var(--text-muted);
   font-weight: 600;
 }
 

@@ -10,7 +10,7 @@ on:
       tag:
         description: 'اسم الوسم للإصدار (مثال: v1.1.0)'
         required: true
-        default: v1.2.0
+        default: v1.2.1
 
 permissions:
   contents: write

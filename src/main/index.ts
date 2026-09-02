@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, nativeTheme, shell } from 'electron'
 import path from 'node:path'
 import { registerCleanerIpc } from './ipc/cleaner'
 import { registerUninstallerIpc } from './ipc/uninstaller'
@@ -18,6 +18,12 @@ let quitting = false
 // يلزم ويندوز لإظهار الإشعارات باسم التطبيق لا باسم electron
 app.setAppUserModelId('com.alcode.cleanshelf')
 
+function windowBackground(): string {
+  const theme = getSettingsSync().theme
+  const dark = theme === 'dark' || (theme === 'system' && nativeTheme.shouldUseDarkColors)
+  return dark ? '#0b0f18' : '#f3f5f9'
+}
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
@@ -27,7 +33,8 @@ function createWindow(): BrowserWindow {
     show: false,
     autoHideMenuBar: true,
     title: 'CleanShelf',
-    backgroundColor: '#0d1424',
+    // لون النافذة قبل تحميل الواجهة يطابق السمة المحفوظة فلا يومض لون مغاير
+    backgroundColor: windowBackground(),
     // النسخة المحزومة تأخذ أيقونتها من الملف التنفيذي نفسه؛ هذه لوضع التطوير فقط
     ...(isDev ? { icon: path.join(__dirname, '../../build/icon.png') } : {}),
     webPreferences: {
