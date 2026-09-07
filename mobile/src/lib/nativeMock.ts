@@ -264,6 +264,9 @@ export class CleanShelfMock extends WebPlugin implements CleanShelfNativePlugin 
   async clearOwnCache() {
     return { freedBytes: 4 * MB }
   }
+  async log({ message }: { message: string }) {
+    console.log(message)
+  }
   async openUrl({ url }: { url: string }) {
     window.open(url, '_blank')
   }

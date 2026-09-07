@@ -75,6 +75,8 @@ export interface CleanShelfNativePlugin {
   notify(options: { title: string; body: string }): Promise<void>
   clearOwnCache(): Promise<{ freedBytes: number }>
   openUrl(options: { url: string }): Promise<void>
+  /** يكتب سطرًا في logcat بوسم CleanShelf — لفحص التشغيل الآلي */
+  log(options: { message: string }): Promise<void>
 
   addListener(
     eventName: 'scanProgress',

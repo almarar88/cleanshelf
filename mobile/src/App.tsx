@@ -66,7 +66,7 @@ function Shell(): JSX.Element {
   useEffect(() => {
     Native.purgeOldTrash({ days: settings.trashRetentionDays }).catch(() => undefined)
     Native.deviceInfo()
-      .then((d) => console.log(`CLEANSHELF_SMOKE_OK model=${d.model} sdk=${d.sdkInt} version=${d.appVersion}`))
+      .then((d) => Native.log({ message: `CLEANSHELF_SMOKE_OK model=${d.model} sdk=${d.sdkInt} version=${d.appVersion}` }))
       .catch((err) => console.log('CLEANSHELF_SMOKE_FAIL ' + (err as Error).message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

@@ -1136,6 +1136,12 @@ class CleanShelfPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun log(call: PluginCall) {
+        android.util.Log.i("CleanShelf", call.getString("message") ?: "")
+        call.resolve()
+    }
+
+    @PluginMethod
     fun openUrl(call: PluginCall) {
         val url = call.getString("url") ?: return call.reject("url مطلوب")
         if (!url.startsWith("https://")) return call.reject("رابط غير مسموح")

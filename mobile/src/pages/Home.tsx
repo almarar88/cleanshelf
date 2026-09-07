@@ -59,7 +59,7 @@ export function Home(): JSX.Element {
       setJunk(j)
       setHealth(computeHealth(s, j, dl, h))
       // يلتقطه فحص التشغيل الآلي في CI من logcat — دليل أن الفحص الأصلي عمل على جهاز حقيقي
-      if (j) console.log(`CLEANSHELF_SMOKE_SCAN categories=${j.categories.length} files=${j.scannedFiles} bytes=${j.totalBytes}`)
+      if (j) Native.log({ message: `CLEANSHELF_SMOKE_SCAN categories=${j.categories.length} files=${j.scannedFiles} bytes=${j.totalBytes}` }).catch(() => undefined)
     } catch (err) {
       showToast('تعذّر الفحص: ' + (err as Error).message)
     } finally {
