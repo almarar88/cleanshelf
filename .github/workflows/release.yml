@@ -140,25 +140,8 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            adb install -r mobile/android/app/build/outputs/apk/release/CleanShelf.apk
-            adb shell appops set com.alcode.cleanshelf MANAGE_EXTERNAL_STORAGE allow
-            adb shell mkdir -p /sdcard/Download && adb shell "echo junk > /sdcard/Download/smoke.tmp"
-            adb logcat -c
-            adb shell am start -n com.alcode.cleanshelf/.MainActivity
-            for i in $(seq 1 24); do
-              sleep 5
-              adb logcat -d > logcat.txt
-              grep -q "CLEANSHELF_SMOKE_SCAN" logcat.txt && break
-            done
-            adb exec-out screencap -p > android-smoke.png || true
-            echo "--- سطور الفحص ---"
-            grep -E "CLEANSHELF_SMOKE|AndroidRuntime|FATAL" logcat.txt || true
-            adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" | grep -q cleanshelf || { echo "التطبيق ليس في المقدمة"; exit 1; }
-            grep -q "CLEANSHELF_SMOKE_OK" logcat.txt || { echo "لم تصل الواجهة أو الجسر"; exit 1; }
-            grep -q "CLEANSHELF_SMOKE_SCAN" logcat.txt || { echo "لم يكتمل فحص الذاكرة الأصلي"; exit 1; }
-            grep -q "FATAL EXCEPTION" logcat.txt && { echo "انهيار في التطبيق"; exit 1; } || true
-            echo "فحص أندرويد نجح ✅"
+          # كل سطر في script يُنفَّذ بصدفة مستقلة، فالحلقات لا تعمل هنا — السكربت في ملف
+          script: bash mobile/android-smoke.sh
 
       - name: Upload emulator screenshot
         if: always()
