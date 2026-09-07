@@ -1,6 +1,6 @@
 name: Release
 
-# ينشر إصدارًا بملفات ويندوز وماك. يُشغَّل بدفع وسم مثل v1.0.0،
+# ينشر إصدارًا بملفات ويندوز وماك وأندرويد. يُشغَّل بدفع وسم مثل v1.0.0،
 # أو يدويًا من تبويب Actions مع تحديد اسم الوسم.
 on:
   push:
@@ -10,7 +10,7 @@ on:
       tag:
         description: 'اسم الوسم للإصدار (مثال: v1.1.0)'
         required: true
-        default: v1.2.1
+        default: v1.3.0
 
 permissions:
   contents: write
@@ -90,9 +90,94 @@ jobs:
           path: ${{ matrix.artifacts }}
           if-no-files-found: error
 
-  # ينشر بعد نجاح المنصتين معًا، فلا يخرج إصدار ناقص
+  # يبني APK أندرويد ثم يشغّله فعليًا على محاكي: يثبّت، يمنح إذن الملفات، يفتح
+  # التطبيق، وينتظر سطرَي CLEANSHELF_SMOKE_OK (الواجهة + الجسر) و
+  # CLEANSHELF_SMOKE_SCAN (فحص فعلي للذاكرة عبر الكود الأصلي) في logcat.
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Type-check and build web bundle
+        working-directory: mobile
+        run: npm run build
+
+      - name: Sync Capacitor
+        working-directory: mobile
+        run: npx cap sync android
+
+      - name: Build signed APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke-test on an Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb install -r mobile/android/app/build/outputs/apk/release/CleanShelf.apk
+            adb shell appops set com.alcode.cleanshelf MANAGE_EXTERNAL_STORAGE allow
+            adb shell mkdir -p /sdcard/Download && adb shell "echo junk > /sdcard/Download/smoke.tmp"
+            adb logcat -c
+            adb shell am start -n com.alcode.cleanshelf/.MainActivity
+            for i in $(seq 1 24); do
+              sleep 5
+              adb logcat -d > logcat.txt
+              grep -q "CLEANSHELF_SMOKE_SCAN" logcat.txt && break
+            done
+            adb exec-out screencap -p > android-smoke.png || true
+            echo "--- سطور الفحص ---"
+            grep -E "CLEANSHELF_SMOKE|AndroidRuntime|FATAL" logcat.txt || true
+            adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" | grep -q cleanshelf || { echo "التطبيق ليس في المقدمة"; exit 1; }
+            grep -q "CLEANSHELF_SMOKE_OK" logcat.txt || { echo "لم تصل الواجهة أو الجسر"; exit 1; }
+            grep -q "CLEANSHELF_SMOKE_SCAN" logcat.txt || { echo "لم يكتمل فحص الذاكرة الأصلي"; exit 1; }
+            grep -q "FATAL EXCEPTION" logcat.txt && { echo "انهيار في التطبيق"; exit 1; } || true
+            echo "فحص أندرويد نجح ✅"
+
+      - name: Upload emulator screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-smoke-screenshot
+          path: android-smoke.png
+          if-no-files-found: ignore
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: mobile/android/app/build/outputs/apk/release/CleanShelf.apk
+          if-no-files-found: error
+
+  # ينشر بعد نجاح المنصات الثلاث معًا، فلا يخرج إصدار ناقص
   publish:
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +196,7 @@ jobs:
         run: |
           TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
           ls -la release-files
-          FILES=$(find release-files -type f \( -name '*.exe' -o -name '*.dmg' \))
+          FILES=$(find release-files -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.apk' \))
           if [ -z "$FILES" ]; then echo "لا توجد ملفات للنشر"; exit 1; fi
           gh release create "$TAG" $FILES \
             --target "$GITHUB_SHA" \
