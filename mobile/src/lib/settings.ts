@@ -10,7 +10,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   oldDownloadDays: 30,
   shredPasses: 3,
   trashRetentionDays: 30,
-  showSystemApps: false
+  showSystemApps: false,
+  reminderEnabled: false,
+  reminderDay: 6,
+  reminderHour: 19
 }
 
 export function loadSettings(): AppSettings {

@@ -68,6 +68,21 @@ export function Settings(): JSX.Element {
           <Switch checked={settings.scanOnLaunch} onChange={(v) => updateSettings({ scanOnLaunch: v })} label="الفحص التلقائي" />
         </div>
         <div className="settings-row">
+          <div className="text"><div className="title">تذكير أسبوعي بالتنظيف</div><div className="desc">إشعار يذكّرك بما تراكم منذ آخر فحص</div></div>
+          <Switch checked={settings.reminderEnabled} onChange={(v) => { updateSettings({ reminderEnabled: v }); Native.setReminder({ enabled: v, dayOfWeek: settings.reminderDay, hour: settings.reminderHour }).catch(() => undefined) }} label="التذكير الأسبوعي" />
+        </div>
+        {settings.reminderEnabled && (
+          <div className="settings-row">
+            <div className="text"><div className="title">موعد التذكير</div></div>
+            <select value={settings.reminderDay} onChange={(e) => { const d = Number(e.target.value); updateSettings({ reminderDay: d }); Native.setReminder({ enabled: true, dayOfWeek: d, hour: settings.reminderHour }).catch(() => undefined) }}>
+              {[['1', 'الأحد'], ['2', 'الاثنين'], ['3', 'الثلاثاء'], ['4', 'الأربعاء'], ['5', 'الخميس'], ['6', 'الجمعة'], ['7', 'السبت']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <select value={settings.reminderHour} onChange={(e) => { const h = Number(e.target.value); updateSettings({ reminderHour: h }); Native.setReminder({ enabled: true, dayOfWeek: settings.reminderDay, hour: h }).catch(() => undefined) }}>
+              {[8, 10, 12, 15, 18, 19, 20, 21].map((h) => <option key={h} value={h}>{h > 12 ? `${h - 12} م` : `${h} ص`}</option>)}
+            </select>
+          </div>
+        )}
+        <div className="settings-row">
           <div className="text"><div className="title">الاحتفاظ في سلة المهملات</div><div className="desc">يُحذف ما هو أقدم نهائيًا عند فتح التطبيق</div></div>
           <select value={settings.trashRetentionDays} onChange={(e) => updateSettings({ trashRetentionDays: Number(e.target.value) })}>
             {[3, 7, 14, 30, 60].map((d) => <option key={d} value={d}>{d} يوم</option>)}
@@ -92,6 +107,14 @@ export function Settings(): JSX.Element {
         <div className="settings-row">
           <div className="text"><div className="title">ذاكرة CleanShelf المؤقتة</div><div className="desc">ملفات هذا التطبيق المؤقتة</div></div>
           <button className="btn btn-sm" onClick={() => Native.clearOwnCache().then((r) => showToast(`تم تحرير ${formatBytes(r.freedBytes)}`))}>مسح</button>
+        </div>
+      </div>
+
+      <div className="section-title">الشاشة الرئيسية</div>
+      <div className="card">
+        <div className="settings-row">
+          <div className="tile-icon sm tone-cyan"><Icon name="widget" size={17} /></div>
+          <div className="text"><div className="title">ودجت CleanShelf</div><div className="desc">اضغط مطوّلًا على الشاشة الرئيسية ← الأدوات (Widgets) ← CleanShelf لعرض درجة الصحة والمساحة وزر تنظيف سريع</div></div>
         </div>
       </div>
 

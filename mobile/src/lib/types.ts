@@ -197,6 +197,9 @@ export interface AppSettings {
   shredPasses: number
   trashRetentionDays: number
   showSystemApps: boolean
+  reminderEnabled: boolean
+  reminderDay: number
+  reminderHour: number
 }
 
 export interface HealthFactor {
@@ -205,4 +208,50 @@ export interface HealthFactor {
   status: 'good' | 'warn' | 'bad'
   detail: string
   page?: string
+}
+
+// ---------- تفصيل التخزين ----------
+
+export interface MediaStats {
+  imagesBytes: number
+  imagesCount: number
+  videosBytes: number
+  videosCount: number
+  audioBytes: number
+  audioCount: number
+  appsBytes: number
+  totalBytes: number
+  freeBytes: number
+}
+
+// ---------- واتساب وتيليجرام ----------
+
+export interface SocialCategory {
+  id: string
+  app: string
+  label: string
+  sizeBytes: number
+  fileCount: number
+  risk: 'safe' | 'caution'
+  newestAt: number
+  paths: string[]
+}
+
+// ---------- لقطات الشاشة ----------
+
+export interface ScreenshotItem {
+  path: string
+  name: string
+  sizeBytes: number
+  modifiedAt: number
+  isVideo: boolean
+  thumb: string
+}
+
+// ---------- مسرّع الذاكرة ----------
+
+export interface BoostResult {
+  beforeAvailable: number
+  afterAvailable: number
+  killed: string[]
 }

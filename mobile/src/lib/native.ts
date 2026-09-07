@@ -1,6 +1,10 @@
 import { registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 import type {
   AppEntry,
+  BoostResult,
+  MediaStats,
+  ScreenshotItem,
+  SocialCategory,
   AudioTag,
   AudioTagWrite,
   CleanHistoryEntry,
@@ -76,6 +80,15 @@ export interface CleanShelfNativePlugin {
   clearOwnCache(): Promise<{ freedBytes: number }>
   openUrl(options: { url: string }): Promise<void>
   /** يكتب سطرًا في logcat بوسم CleanShelf — لفحص التشغيل الآلي */
+  log(options: { message: string }): Promise<void>
+
+  mediaStats(): Promise<MediaStats>
+  socialMedia(): Promise<{ categories: SocialCategory[]; apps: string[] }>
+  screenshots(options: { days: number }): Promise<{ items: ScreenshotItem[]; totalBytes: number; totalCount: number }>
+  thumbnail(options: { path: string; size?: number }): Promise<{ thumb: string }>
+  boostMemory(): Promise<BoostResult>
+  setReminder(options: { enabled: boolean; dayOfWeek: number; hour: number }): Promise<void>
+  updateWidget(options: { freePercent: number; junkBytes: number; score: number }): Promise<void>
   log(options: { message: string }): Promise<void>
 
   addListener(

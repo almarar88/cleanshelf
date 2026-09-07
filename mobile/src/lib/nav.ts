@@ -16,6 +16,9 @@ export type PageId =
   | 'report'
   | 'settings'
   | 'history'
+  | 'social'
+  | 'screenshots'
+  | 'booster'
 
 export const PAGE_META: Record<PageId, { title: string; sub: string; icon: IconName; tone?: string }> = {
   home: { title: 'CleanShelf', sub: 'صحة هاتفك بنظرة واحدة', icon: 'home' },
@@ -35,7 +38,10 @@ export const PAGE_META: Record<PageId, { title: string; sub: string; icon: IconN
   device: { title: 'معلومات الجهاز', sub: 'الذاكرة والتخزين والبطارية', icon: 'monitor', tone: 'tone-green' },
   report: { title: 'تقرير الجهاز', sub: 'لقطة كاملة قابلة للمشاركة', icon: 'fileText', tone: 'tone-teal' },
   settings: { title: 'الإعدادات', sub: 'المظهر والسلوك', icon: 'cog' },
-  history: { title: 'سجل التنظيف', sub: 'كم مساحة تحرّرت سابقًا', icon: 'history', tone: 'tone-green' }
+  history: { title: 'سجل التنظيف', sub: 'كم مساحة تحرّرت سابقًا', icon: 'history', tone: 'tone-green' },
+  social: { title: 'واتساب وتيليجرام', sub: 'وسائط الدردشات التي تلتهم مساحتك', icon: 'message', tone: 'tone-green' },
+  screenshots: { title: 'لقطات الشاشة', sub: 'لقطات قديمة نسيتها في المعرض', icon: 'image', tone: 'tone-violet' },
+  booster: { title: 'مسرّع الذاكرة', sub: 'أغلق ما يعمل في الخلفية بضغطة', icon: 'zap', tone: 'tone-amber' }
 }
 
 export const TABS: { id: TabId; label: string; icon: IconName }[] = [
@@ -46,4 +52,4 @@ export const TABS: { id: TabId; label: string; icon: IconName }[] = [
   { id: 'more', label: 'المزيد', icon: 'layers' }
 ]
 
-export const TOOL_PAGES: PageId[] = ['analyzer', 'duplicates', 'largefiles', 'downloads', 'emptyfolders', 'trash', 'tags', 'shredder', 'usage', 'device', 'report', 'history']
+export const TOOL_PAGES: PageId[] = ['social', 'screenshots', 'booster', 'analyzer', 'duplicates', 'largefiles', 'downloads', 'emptyfolders', 'trash', 'tags', 'shredder', 'usage', 'device', 'report', 'history']

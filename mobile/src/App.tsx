@@ -17,6 +17,11 @@ import { Trash } from './pages/tools/Trash'
 import { Shredder } from './pages/tools/Shredder'
 import { TagEditor } from './pages/tools/TagEditor'
 import { Usage, Device, Report, History } from './pages/tools/InfoPages'
+import { Social } from './pages/tools/Social'
+import { Screenshots } from './pages/tools/Screenshots'
+import { Booster } from './pages/tools/Booster'
+import { StatusBar, Style } from '@capacitor/status-bar'
+import { tap } from './lib/haptics'
 
 function renderPage(page: PageId): JSX.Element {
   switch (page) {
@@ -38,6 +43,9 @@ function renderPage(page: PageId): JSX.Element {
     case 'device': return <Device />
     case 'report': return <Report />
     case 'history': return <History />
+    case 'social': return <Social />
+    case 'screenshots': return <Screenshots />
+    case 'booster': return <Booster />
   }
 }
 
@@ -61,6 +69,13 @@ function Shell(): JSX.Element {
       handle.then((h) => h.remove())
     }
   }, [back, navigate, tab])
+
+  // شريط الحالة يتبع السمة الفعلية (فاتح/داكن)
+  useEffect(() => {
+    const dark = settings.theme === 'dark' || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => undefined)
+    StatusBar.setBackgroundColor({ color: dark ? '#0b0f18' : '#f3f5f9' }).catch(() => undefined)
+  }, [settings.theme])
 
   // تنظيف سلة المهملات القديمة عند الفتح، وإبلاغ فحص التشغيل الآلي أن الواجهة والجسر يعملان
   useEffect(() => {
@@ -89,7 +104,7 @@ function Shell(): JSX.Element {
       {!inTool && (
         <nav className="tabbar">
           {TABS.map((t) => (
-            <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => navigate(t.id)}>
+            <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => { tap(); navigate(t.id) }}>
               <span className="pill"><Icon name={t.icon} size={20} strokeWidth={tab === t.id ? 2.2 : 1.8} /></span>
               {t.label}
             </button>

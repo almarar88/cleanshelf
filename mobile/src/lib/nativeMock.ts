@@ -271,6 +271,47 @@ export class CleanShelfMock extends WebPlugin implements CleanShelfNativePlugin 
     window.open(url, '_blank')
   }
 
+  async mediaStats() {
+    return { imagesBytes: 24 * GB, imagesCount: 6_120, videosBytes: 31 * GB, videosCount: 410, audioBytes: 5.2 * GB, audioCount: 880, appsBytes: 22 * GB, totalBytes: 128 * GB, freeBytes: 21.4 * GB }
+  }
+
+  async socialMedia() {
+    await this.emitWalk(1400)
+    const mk = (id: string, app: string, label: string, mb: number, n: number, risk: 'safe' | 'caution') => ({ id, app, label, sizeBytes: mb * MB, fileCount: n, risk, newestAt: Date.now() - 86_400_000, paths: Array.from({ length: n }, (_, i) => `${ROOT}/Android/media/${app}/${label}/${i}.bin`) })
+    return {
+      apps: ['WhatsApp', 'Telegram'],
+      categories: [
+        mk('wa_images', 'WhatsApp', 'صور واتساب', 3_800, 9_400, 'caution'),
+        mk('wa_video', 'WhatsApp', 'فيديو واتساب', 6_100, 720, 'caution'),
+        mk('wa_voice', 'WhatsApp', 'الرسائل الصوتية', 410, 2_900, 'safe'),
+        mk('wa_status', 'WhatsApp', 'الحالات المؤقتة', 220, 96, 'safe'),
+        mk('wa_stickers', 'WhatsApp', 'الملصقات', 140, 1_300, 'safe'),
+        mk('wa_docs', 'WhatsApp', 'مستندات واتساب', 900, 210, 'caution'),
+        mk('tg_images', 'Telegram', 'صور تيليجرام', 1_200, 2_100, 'caution'),
+        mk('tg_video', 'Telegram', 'فيديو تيليجرام', 2_400, 140, 'caution')
+      ]
+    }
+  }
+
+  async screenshots({ days }: { days: number }) {
+    await this.emitWalk(900)
+    const colors = ['#334155', '#475569', '#1e293b', '#0f172a', '#3b3f58', '#2c3e50', '#37474f', '#263238', '#455a64', '#3e4a5a', '#2d3748', '#1a202c']
+    const items = colors.map((c, i) => ({ path: `${ROOT}/DCIM/Screenshots/Screenshot_2025-0${(i % 9) + 1}-1${i}.png`, name: `Screenshot_${i}.png`, sizeBytes: (0.6 + i * 0.15) * MB, modifiedAt: Date.now() - (days + i * 9) * 86_400_000, isVideo: false, thumb: png(c) }))
+    return { items, totalBytes: items.reduce((s, x) => s + x.sizeBytes, 0), totalCount: items.length }
+  }
+
+  async thumbnail() {
+    return { thumb: png('#475569') }
+  }
+
+  async boostMemory() {
+    await delay(1500)
+    return { beforeAvailable: 2.9 * GB, afterAvailable: 3.6 * GB, killed: ['Instagram', 'Spotify', 'Old Game'] }
+  }
+
+  async setReminder() {}
+  async updateWidget() {}
+
   private async emitWalk(totalMs: number): Promise<void> {
     this.cancelled = false
     const steps = 6

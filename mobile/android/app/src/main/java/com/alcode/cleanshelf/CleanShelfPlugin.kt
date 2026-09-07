@@ -25,6 +25,12 @@ import android.os.StatFs
 import android.os.SystemClock
 import android.os.storage.StorageManager
 import android.provider.Settings
+import android.provider.MediaStore
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.graphics.Matrix
 import android.util.Base64
 import androidx.activity.result.ActivityResult
 import androidx.core.app.NotificationCompat
@@ -1146,6 +1152,205 @@ class CleanShelfPlugin : Plugin() {
         val url = call.getString("url") ?: return call.reject("url مطلوب")
         if (!url.startsWith("https://")) return call.reject("رابط غير مسموح")
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        call.resolve()
+    }
+
+    // ---------- تفصيل التخزين عبر MediaStore ----------
+
+    private fun mediaTotal(uri: Uri): LongArray {
+        var bytes = 0L
+        var count = 0L
+        try {
+            context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.SIZE), null, null, null)?.use { c ->
+                val idx = c.getColumnIndex(MediaStore.MediaColumns.SIZE)
+                while (c.moveToNext()) { bytes += c.getLong(idx); count++ }
+            }
+        } catch (e: Exception) { }
+        return longArrayOf(bytes, count)
+    }
+
+    @PluginMethod
+    fun mediaStats(call: PluginCall) = bg(call) {
+        val images = mediaTotal(MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        val videos = mediaTotal(MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
+        val audio = mediaTotal(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI)
+        var apps = 0L
+        if (hasUsageStats()) {
+            for (app in context.packageManager.getInstalledApplications(0)) {
+                if ((app.flags and ApplicationInfo.FLAG_SYSTEM) != 0) continue
+                apps += appSize(app)
+            }
+        }
+        val stat = StatFs(root.path)
+        JSObject().apply {
+            put("imagesBytes", images[0]); put("imagesCount", images[1])
+            put("videosBytes", videos[0]); put("videosCount", videos[1])
+            put("audioBytes", audio[0]); put("audioCount", audio[1])
+            put("appsBytes", apps)
+            put("totalBytes", stat.totalBytes)
+            put("freeBytes", stat.availableBytes)
+        }
+    }
+
+    // ---------- واتساب وتيليجرام ----------
+
+    private data class SocialCat(val id: String, val app: String, val label: String, val dirs: List<String>, val risk: String)
+
+    private fun socialCategories(): List<SocialCat> {
+        val wa = listOf("Android/media/com.whatsapp/WhatsApp/Media", "WhatsApp/Media")
+        val wab = listOf("Android/media/com.whatsapp.w4b/WhatsApp Business/Media")
+        val tg = listOf("Android/media/org.telegram.messenger/Telegram", "Telegram")
+        fun waDirs(sub: String) = (wa + wab).map { "$it/$sub" }
+        return listOf(
+            SocialCat("wa_images", "WhatsApp", "صور واتساب", waDirs("WhatsApp Images"), "caution"),
+            SocialCat("wa_video", "WhatsApp", "فيديو واتساب", waDirs("WhatsApp Video"), "caution"),
+            SocialCat("wa_voice", "WhatsApp", "الرسائل الصوتية", waDirs("WhatsApp Voice Notes"), "safe"),
+            SocialCat("wa_audio", "WhatsApp", "ملفات صوت واتساب", waDirs("WhatsApp Audio"), "caution"),
+            SocialCat("wa_docs", "WhatsApp", "مستندات واتساب", waDirs("WhatsApp Documents"), "caution"),
+            SocialCat("wa_status", "WhatsApp", "الحالات المؤقتة", waDirs(".Statuses"), "safe"),
+            SocialCat("wa_stickers", "WhatsApp", "الملصقات", waDirs("WhatsApp Stickers"), "safe"),
+            SocialCat("wa_gifs", "WhatsApp", "صور GIF", waDirs("WhatsApp Animated Gifs"), "safe"),
+            SocialCat("wa_profile", "WhatsApp", "صور الملفات الشخصية", waDirs("WhatsApp Profile Photos"), "safe"),
+            SocialCat("wa_wallpaper", "WhatsApp", "خلفيات الدردشة", waDirs("WallPaper"), "safe"),
+            SocialCat("tg_images", "Telegram", "صور تيليجرام", tg.map { "$it/Telegram Images" }, "caution"),
+            SocialCat("tg_video", "Telegram", "فيديو تيليجرام", tg.map { "$it/Telegram Video" }, "caution"),
+            SocialCat("tg_audio", "Telegram", "صوتيات تيليجرام", tg.map { "$it/Telegram Audio" }, "safe"),
+            SocialCat("tg_docs", "Telegram", "مستندات تيليجرام", tg.map { "$it/Telegram Documents" }, "caution"),
+            SocialCat("tg_stories", "Telegram", "قصص تيليجرام", tg.map { "$it/Telegram Stories" }, "safe")
+        )
+    }
+
+    @PluginMethod
+    fun socialMedia(call: PluginCall) = bg(call) {
+        cancelled = false
+        val arr = JSArray()
+        val apps = HashSet<String>()
+        for (cat in socialCategories()) {
+            checkCancel()
+            var bytes = 0L
+            var count = 0
+            val paths = JSArray()
+            var newest = 0L
+            for (rel in cat.dirs) {
+                val dir = File(root, rel)
+                if (!dir.isDirectory) continue
+                walk(dir, { f ->
+                    if (f.name == ".nomedia") return@walk
+                    bytes += f.length(); count++
+                    if (f.lastModified() > newest) newest = f.lastModified()
+                    if (paths.length() < 6000) paths.put(f.path)
+                })
+            }
+            if (count == 0) continue
+            apps.add(cat.app)
+            val o = JSObject()
+            o.put("id", cat.id); o.put("app", cat.app); o.put("label", cat.label)
+            o.put("sizeBytes", bytes); o.put("fileCount", count); o.put("risk", cat.risk)
+            o.put("newestAt", newest); o.put("paths", paths)
+            arr.put(o)
+        }
+        val appsArr = JSArray(); apps.forEach { appsArr.put(it) }
+        JSObject().apply { put("categories", arr); put("apps", appsArr) }
+    }
+
+    // ---------- لقطات الشاشة ----------
+
+    private fun thumbnailOf(f: File, target: Int): String {
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(f.path, bounds)
+            var sample = 1
+            while (bounds.outWidth / sample > target * 2 || bounds.outHeight / sample > target * 2) sample *= 2
+            val bmp = BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return ""
+            val scale = target.toFloat() / maxOf(bmp.width, bmp.height)
+            val m = Matrix().apply { postScale(scale, scale) }
+            val small = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+            val out = ByteArrayOutputStream()
+            small.compress(Bitmap.CompressFormat.JPEG, 70, out)
+            Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+        } catch (e: Exception) { "" }
+    }
+
+    @PluginMethod
+    fun screenshots(call: PluginCall) = bg(call) {
+        cancelled = false
+        val days = call.getInt("days") ?: 0
+        val cutoff = System.currentTimeMillis() - days * 86_400_000L
+        val dirs = listOf("DCIM/Screenshots", "Pictures/Screenshots", "Screenshots", "DCIM/Screen recordings", "Movies/Screen recordings")
+        val found = ArrayList<File>()
+        for (rel in dirs) {
+            val dir = File(root, rel)
+            if (!dir.isDirectory) continue
+            walk(dir, { f -> if (f.lastModified() < cutoff && f.extension.lowercase() in setOf("png", "jpg", "jpeg", "webp", "mp4")) found.add(f) })
+        }
+        val sorted = found.sortedByDescending { it.lastModified() }.take(400)
+        val arr = JSArray()
+        sorted.forEachIndexed { i, f ->
+            checkCancel()
+            if (i % 20 == 0) progress("walking", sorted.size, i, sorted.size, f.path)
+            val o = JSObject()
+            o.put("path", f.path); o.put("name", f.name); o.put("sizeBytes", f.length())
+            o.put("modifiedAt", f.lastModified()); o.put("isVideo", f.extension.equals("mp4", true))
+            o.put("thumb", if (f.extension.equals("mp4", true)) "" else thumbnailOf(f, 220))
+            arr.put(o)
+        }
+        JSObject().apply { put("items", arr); put("totalBytes", found.sumOf { it.length() }); put("totalCount", found.size) }
+    }
+
+    @PluginMethod
+    fun thumbnail(call: PluginCall) = bg(call) {
+        val f = File(call.getString("path") ?: "")
+        JSObject().apply { put("thumb", if (f.isFile) thumbnailOf(f, call.getInt("size") ?: 220) else "") }
+    }
+
+    // ---------- مسرّع الذاكرة ----------
+
+    @PluginMethod
+    fun boostMemory(call: PluginCall) = bg(call) {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val before = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
+        val pm = context.packageManager
+        val killed = JSArray()
+        // التطبيقات المستخدمة مؤخرًا هي الأرجح أن تكون في الخلفية؛ النظام يتجاهل ما لا يجوز إنهاؤه
+        val recent = if (hasUsageStats()) lastUsedMap(2).keys else pm.getInstalledApplications(0).map { it.packageName }
+        for (pkg in recent) {
+            if (pkg == context.packageName) continue
+            val app = try { pm.getApplicationInfo(pkg, 0) } catch (e: Exception) { null } ?: continue
+            if ((app.flags and ApplicationInfo.FLAG_SYSTEM) != 0) continue
+            try {
+                am.killBackgroundProcesses(pkg)
+                killed.put(pm.getApplicationLabel(app).toString())
+            } catch (e: Exception) { }
+        }
+        Thread.sleep(600)
+        val after = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
+        JSObject().apply { put("beforeAvailable", before); put("afterAvailable", after); put("killed", killed) }
+    }
+
+    // ---------- التذكير الأسبوعي ----------
+
+    @PluginMethod
+    fun setReminder(call: PluginCall) {
+        val enabled = call.getBoolean("enabled") ?: false
+        val dayOfWeek = call.getInt("dayOfWeek") ?: 6 // 1=الأحد … 7=السبت (Calendar)
+        val hour = call.getInt("hour") ?: 19
+        prefs.edit().putBoolean("reminderEnabled", enabled).putInt("reminderDay", dayOfWeek).putInt("reminderHour", hour).apply()
+        ReminderReceiver.schedule(context, enabled, dayOfWeek, hour)
+        call.resolve()
+    }
+
+    // ---------- الودجت ----------
+
+    @PluginMethod
+    fun updateWidget(call: PluginCall) {
+        prefs.edit()
+            .putInt("widgetFreePercent", call.getInt("freePercent") ?: 0)
+            .putLong("widgetJunkBytes", call.getLong("junkBytes") ?: 0L)
+            .putInt("widgetScore", call.getInt("score") ?: 0)
+            .apply()
+        val mgr = AppWidgetManager.getInstance(context)
+        val ids = mgr.getAppWidgetIds(ComponentName(context, CleanShelfWidget::class.java))
+        if (ids.isNotEmpty()) CleanShelfWidget.render(context, mgr, ids)
         call.resolve()
     }
 }

@@ -4,4 +4,5 @@
     <string name="title_activity_main">CleanShelf</string>
     <string name="package_name">com.alcode.cleanshelf</string>
     <string name="custom_url_scheme">com.alcode.cleanshelf</string>
+    <string name="widget_description">صحة الهاتف والمساحة القابلة للتنظيف بنظرة</string>
 </resources>
