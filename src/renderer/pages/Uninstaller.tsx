@@ -3,6 +3,8 @@ import { Icon } from '../components/Icon'
 import type { InstalledApp, LeftoverItem } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 export function Uninstaller(): JSX.Element {
   const { showToast } = useToast()
@@ -19,7 +21,7 @@ export function Uninstaller(): JSX.Element {
     try {
       setApps(await window.api.uninstaller.list())
     } catch (err) {
-      showToast('فشل جلب قائمة البرامج: ' + (err as Error).message)
+      showToast(t('un.loadFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -40,14 +42,14 @@ export function Uninstaller(): JSX.Element {
 
   async function handleUninstall(app: InstalledApp): Promise<void> {
     const confirmed = await window.api.dialogs.confirm(
-      `إزالة "${app.name}"؟`,
-      'سيتم تشغيل أداة إزالة البرنامج الرسمية الخاصة به. قد تظهر نافذة تأكيد إضافية منها.'
+      t('un.confirm', { name: app.name }),
+      t('un.confirmDetail')
     )
     if (!confirmed) return
     setBusyKey(app.key)
     try {
       const result = await window.api.uninstaller.uninstall(app)
-      showToast(result.success ? `تمت إزالة ${app.name}` : `تعذّرت الإزالة: ${result.message}`)
+      showToast(result.success ? t('un.removed', { name: app.name }) : t('un.removeFailed', { msg: result.message }))
       if (result.success) {
         await load()
         openLeftoverScan(app)
@@ -71,16 +73,16 @@ export function Uninstaller(): JSX.Element {
 
   async function removeLeftover(item: LeftoverItem): Promise<void> {
     const confirmed = await window.api.dialogs.confirm(
-      `حذف المجلد المتبقّي؟`,
-      `${item.path}\nسيُحذف نهائيًا (${formatBytes(item.sizeBytes)}).`
+      t('un.leftoverConfirm'),
+      t('un.leftoverDetail', { path: item.path, size: formatBytes(item.sizeBytes) })
     )
     if (!confirmed) return
     try {
       await window.api.uninstaller.removeLeftover(item.path)
       setLeftovers((prev) => prev.filter((l) => l.path !== item.path))
-      showToast('تم حذف المخلّفات')
+      showToast(t('un.leftoverDeleted'))
     } catch (err) {
-      showToast('فشل الحذف: ' + (err as Error).message)
+      showToast(t('un.deleteFailed', { msg: (err as Error).message }))
     }
   }
 
@@ -89,15 +91,15 @@ export function Uninstaller(): JSX.Element {
       <div className="toolbar">
         <input
           type="search"
-          placeholder="ابحث باسم البرنامج أو الناشر…"
+          placeholder={t('un.searchPh')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ width: 280 }}
         />
-        <span className="muted">{loading ? 'جارٍ التحميل…' : `${filtered.length} برنامج`}</span>
+        <span className="muted">{loading ? t('common.loading') : t('un.count', { n: fmtNum(filtered.length) })}</span>
         <div className="spacer" />
         <button className="btn" onClick={load} disabled={loading}>
-          <Icon name="refresh" size={15} /> تحديث
+          <Icon name="refresh" size={15} /> {t('common.refresh')}
         </button>
       </div>
 
@@ -105,11 +107,11 @@ export function Uninstaller(): JSX.Element {
         <table>
           <thead>
             <tr>
-              <th>الاسم</th>
-              <th>الناشر</th>
-              <th>الإصدار</th>
-              <th>الحجم التقديري</th>
-              <th>تاريخ التثبيت</th>
+              <th>{t('common.name')}</th>
+              <th>{t('un.thPublisher')}</th>
+              <th>{t('un.thVersion')}</th>
+              <th>{t('un.thSize')}</th>
+              <th>{t('un.thInstalled')}</th>
               <th />
             </tr>
           </thead>
@@ -127,14 +129,14 @@ export function Uninstaller(): JSX.Element {
                     disabled={busyKey === app.key}
                     onClick={() => handleUninstall(app)}
                   >
-                    {busyKey === app.key ? 'جارٍ…' : 'إزالة'}
+                    {t(busyKey === app.key ? 'un.busy' : 'un.uninstall')}
                   </button>
                   <button
                     className="btn btn-sm"
                     style={{ marginRight: 6 }}
                     onClick={() => openLeftoverScan(app)}
                   >
-                    مخلّفات
+                    {t('un.leftovers')}
                   </button>
                 </td>
               </tr>
@@ -146,11 +148,11 @@ export function Uninstaller(): JSX.Element {
       {leftoverTarget && (
         <div className="modal-backdrop" onClick={() => setLeftoverTarget(null)}>
           <div className="modal" style={{ width: 560 }} onClick={(e) => e.stopPropagation()}>
-            <h3>مخلّفات "{leftoverTarget.name}"</h3>
+            <h3>{t('un.leftoversTitle', { name: leftoverTarget.name })}</h3>
             {scanningLeftovers ? (
-              <p className="muted">جارٍ البحث عن مجلدات متبقّية…</p>
+              <p className="muted">{t('un.searching')}</p>
             ) : leftovers.length === 0 ? (
-              <p className="muted">لا توجد مخلّفات ظاهرة لهذا البرنامج.</p>
+              <p className="muted">{t('un.noLeftovers')}</p>
             ) : (
               <div className="scroll-list" style={{ maxHeight: 300 }}>
                 {leftovers.map((item) => (
@@ -165,7 +167,7 @@ export function Uninstaller(): JSX.Element {
                     </div>
                     <div className="spacer" />
                     <button className="btn btn-sm btn-danger" onClick={() => removeLeftover(item)}>
-                      حذف
+                      {t('common.delete')}
                     </button>
                   </div>
                 ))}
@@ -174,7 +176,7 @@ export function Uninstaller(): JSX.Element {
             <div className="toolbar" style={{ marginTop: 12, marginBottom: 0 }}>
               <div className="spacer" />
               <button className="btn" onClick={() => setLeftoverTarget(null)}>
-                إغلاق
+                {t('common.close')}
               </button>
             </div>
           </div>

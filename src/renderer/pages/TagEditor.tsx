@@ -3,6 +3,8 @@ import { Icon } from '../components/Icon'
 import type { AudioTag } from '../../shared/types'
 import { formatDuration } from '../lib/format'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 type FormState = Partial<
   Pick<AudioTag, 'title' | 'artist' | 'album' | 'albumArtist' | 'year' | 'genre' | 'track' | 'comment'>
@@ -31,7 +33,7 @@ export function TagEditor(): JSX.Element {
     try {
       setFiles(await window.api.tags.readFolder(picked))
     } catch (err) {
-      showToast('فشل قراءة المجلد: ' + (err as Error).message)
+      showToast(t('tg.readFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -87,7 +89,7 @@ export function TagEditor(): JSX.Element {
       }))
       const results = await window.api.tags.writeBatch(inputs)
       const failed = results.filter((r) => !r.success)
-      showToast(failed.length ? `${failed.length} فشل من ${results.length}` : 'تم الحفظ')
+      showToast(failed.length ? t('tg.savePartial', { fail: fmtNum(failed.length), n: fmtNum(results.length) }) : t('tg.saved'))
       if (folder) setFiles(await window.api.tags.readFolder(folder))
     } finally {
       setSaving(false)
@@ -101,7 +103,7 @@ export function TagEditor(): JSX.Element {
       const result = await window.api.tags.renameFromPattern(f, namePattern)
       if (result.success) ok += 1
     }
-    showToast(`تمت إعادة تسمية ${ok} من ${selectedFiles.length}`)
+    showToast(t('tg.renamed', { ok: fmtNum(ok), n: fmtNum(selectedFiles.length) }))
     if (folder) setFiles(await window.api.tags.readFolder(folder))
   }
 
@@ -110,11 +112,11 @@ export function TagEditor(): JSX.Element {
     const results = await window.api.tags.fillFromFileName(folder, fillPattern)
     const writes = results.map((r) => ({ path: r.path, ...r.fields }))
     if (writes.length === 0) {
-      showToast('لم يتطابق أي ملف مع النمط')
+      showToast(t('tg.noMatch'))
       return
     }
     const written = await window.api.tags.writeBatch(writes)
-    showToast(`تم تعبئة وحفظ وسوم ${written.filter((w) => w.success).length} ملف من الاسم`)
+    showToast(t('tg.filled', { n: fmtNum(written.filter((w) => w.success).length) }))
     setFiles(await window.api.tags.readFolder(folder))
   }
 
@@ -122,13 +124,13 @@ export function TagEditor(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickFolder} disabled={loading}>
-          <Icon name="folderOpen" size={15} /> اختر مجلد أغاني
+          <Icon name="folderOpen" size={15} /> {t('tg.pickFolder')}
         </button>
         {folder && <span className="muted">{folder}</span>}
         <div className="spacer" />
         {files.length > 0 && (
           <button className="btn btn-sm" onClick={toggleAll}>
-            {selected.size === files.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+            {t(selected.size === files.length ? 'od.clearAll' : 'common.selectAll')}
           </button>
         )}
       </div>
@@ -136,7 +138,7 @@ export function TagEditor(): JSX.Element {
       {files.length === 0 ? (
         <div className="empty-state">
           <div className="tile-icon tone-violet"><Icon name="music" size={26} /></div>
-          <div>{loading ? 'جارٍ القراءة…' : 'اختر مجلدًا يحتوي على ملفات صوتية لعرض وتحرير وسومها'}</div>
+          <div>{loading ? t('tg.reading') : t('tg.empty')}</div>
         </div>
       ) : (
         <div className="grid grid-2" style={{ alignItems: 'start' }}>
@@ -145,10 +147,10 @@ export function TagEditor(): JSX.Element {
               <thead>
                 <tr>
                   <th style={{ width: 30 }} />
-                  <th>الملف</th>
-                  <th>الفنان</th>
-                  <th>العنوان</th>
-                  <th>المدة</th>
+                  <th>{t('tg.thFile')}</th>
+                  <th>{t('tg.artist')}</th>
+                  <th>{t('tg.title')}</th>
+                  <th>{t('tg.duration')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -169,53 +171,53 @@ export function TagEditor(): JSX.Element {
 
           <div className="card card-pad">
             {selectedFiles.length === 0 ? (
-              <div className="muted">اختر ملفًا واحدًا أو أكثر من القائمة لتحرير وسومه</div>
+              <div className="muted">{t('tg.pickOne')}</div>
             ) : (
               <>
                 <h3 style={{ marginTop: 0 }}>
-                  {selectedFiles.length === 1 ? selectedFiles[0].fileName : `${selectedFiles.length} ملفات محدَّدة`}
+                  {selectedFiles.length === 1 ? selectedFiles[0].fileName : t('tg.nSelected', { n: fmtNum(selectedFiles.length) })}
                 </h3>
                 {selectedFiles.length > 1 && (
                   <p className="muted" style={{ fontSize: 12 }}>
-                    الحقول الفارغة لن تُغيَّر — عبّئ فقط ما تريد تطبيقه على كل الملفات المحدَّدة
+                    {t('tg.batchNote')}
                   </p>
                 )}
-                <Field label="العنوان" value={form.title} onChange={(v) => setForm((f) => ({ ...f, title: v }))} />
-                <Field label="الفنان" value={form.artist} onChange={(v) => setForm((f) => ({ ...f, artist: v }))} />
-                <Field label="الألبوم" value={form.album} onChange={(v) => setForm((f) => ({ ...f, album: v }))} />
+                <Field label={t('tg.title')} value={form.title} onChange={(v) => setForm((f) => ({ ...f, title: v }))} />
+                <Field label={t('tg.artist')} value={form.artist} onChange={(v) => setForm((f) => ({ ...f, artist: v }))} />
+                <Field label={t('tg.album')} value={form.album} onChange={(v) => setForm((f) => ({ ...f, album: v }))} />
                 <Field
-                  label="فنان الألبوم"
+                  label={t('tg.albumArtist')}
                   value={form.albumArtist}
                   onChange={(v) => setForm((f) => ({ ...f, albumArtist: v }))}
                 />
                 <div className="grid grid-2" style={{ gap: 10 }}>
-                  <Field label="السنة" value={form.year} onChange={(v) => setForm((f) => ({ ...f, year: v }))} />
-                  <Field label="الرقم" value={form.track} onChange={(v) => setForm((f) => ({ ...f, track: v }))} />
+                  <Field label={t('tg.year')} value={form.year} onChange={(v) => setForm((f) => ({ ...f, year: v }))} />
+                  <Field label={t('tg.track')} value={form.track} onChange={(v) => setForm((f) => ({ ...f, track: v }))} />
                 </div>
-                <Field label="النوع" value={form.genre} onChange={(v) => setForm((f) => ({ ...f, genre: v }))} />
+                <Field label={t('tg.genre')} value={form.genre} onChange={(v) => setForm((f) => ({ ...f, genre: v }))} />
                 <Field
-                  label="ملاحظة"
+                  label={t('tg.comment')}
                   value={form.comment}
                   onChange={(v) => setForm((f) => ({ ...f, comment: v }))}
                 />
 
                 <div className="toolbar" style={{ marginTop: 10 }}>
                   <button className="btn btn-sm" onClick={pickCover}>
-                    <Icon name="image" size={15} /> تغيير الغلاف
+                    <Icon name="image" size={15} /> {t('tg.changeCover')}
                   </button>
-                  {coverPath && <span className="muted" style={{ fontSize: 12 }}>سيتم استخدام الصورة المختارة</span>}
+                  {coverPath && <span className="muted" style={{ fontSize: 12 }}>{t('tg.coverChosen')}</span>}
                 </div>
 
                 <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={save} disabled={saving}>
-                  <Icon name="save" size={15} /> {saving ? 'جارٍ الحفظ…' : 'حفظ الوسوم'}
+                  <Icon name="save" size={15} /> {saving ? t('tg.saving') : t('tg.saveTags')}
                 </button>
                 <p className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
-                  الحفظ بالكتابة مدعوم حاليًا لملفات MP3 فقط.
+                  {t('tg.mp3Only')}
                 </p>
 
                 <hr style={{ margin: '16px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
 
-                <h4 style={{ marginBottom: 6 }}>إعادة تسمية من الوسوم</h4>
+                <h4 style={{ marginBottom: 6 }}>{t('tg.renameFromTags')}</h4>
                 <div className="toolbar">
                   <input
                     type="text"
@@ -224,14 +226,14 @@ export function TagEditor(): JSX.Element {
                     style={{ flex: 1 }}
                   />
                   <button className="btn btn-sm" onClick={renameSelectedFromTags}>
-                    تطبيق
+                    {t('common.apply')}
                   </button>
                 </div>
               </>
             )}
 
             <hr style={{ margin: '16px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
-            <h4 style={{ marginBottom: 6 }}>تعبئة الوسوم من اسم الملف (كل المجلد)</h4>
+            <h4 style={{ marginBottom: 6 }}>{t('tg.fillFromName')}</h4>
             <div className="toolbar">
               <input
                 type="text"
@@ -240,11 +242,11 @@ export function TagEditor(): JSX.Element {
                 style={{ flex: 1 }}
               />
               <button className="btn btn-sm" onClick={fillFromFileNames}>
-                تطبيق على المجلد
+                {t('tg.applyFolder')}
               </button>
             </div>
             <p className="muted" style={{ fontSize: 11.5 }}>
-              مثال: %artist% - %title% يطابق "Fairuz - Nassam Alayna.mp3"
+              {t('tg.patternExample')}
             </p>
           </div>
         </div>

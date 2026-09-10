@@ -3,6 +3,8 @@ import type { AppSettings, OldDownload } from '../../shared/types'
 import { formatBytes, formatDate } from '../lib/format'
 import { useToast } from '../lib/toastContext'
 import { Icon, type IconName } from '../components/Icon'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 function typeIcon(d: OldDownload): IconName {
   if (d.isDirectory) return 'folder'
@@ -43,7 +45,7 @@ export function OldDownloads({ settings }: { settings: AppSettings | null }): JS
     try {
       setItems(await window.api.downloads.findOld(withDays))
     } catch (err) {
-      showToast('فشل الفحص: ' + (err as Error).message)
+      showToast(t('ex.scanFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -64,13 +66,13 @@ export function OldDownloads({ settings }: { settings: AppSettings | null }): JS
   async function trash(): Promise<void> {
     if (selected.size === 0) return
     const confirmed = await window.api.dialogs.confirm(
-      `نقل ${selected.size} عنصر إلى المهملات؟`,
-      `سيتحرّر نحو ${formatBytes(selectedBytes)}. يمكنك استرجاعها من المهملات.`
+      t('od.trashConfirm', { n: fmtNum(selected.size) }),
+      t('od.trashDetail', { size: formatBytes(selectedBytes) })
     )
     if (!confirmed) return
     const results = await window.api.fm.trashPaths([...selected])
     const failed = results.filter((r) => !r.success).length
-    showToast(failed ? `حُذف ${results.length - failed}، وتعذّر ${failed}` : `تم نقل ${results.length} عنصر إلى المهملات`)
+    showToast(failed ? t('od.partial', { ok: fmtNum(results.length - failed), fail: fmtNum(failed) }) : t('od.moved', { n: fmtNum(results.length) }))
     await scan()
   }
 
@@ -78,41 +80,41 @@ export function OldDownloads({ settings }: { settings: AppSettings | null }): JS
     <div className="page">
       <div className="toolbar">
         <label className="checkbox-row muted" style={{ fontSize: 13 }}>
-          أقدم من
+          {t('od.olderThan')}
           <select value={days} onChange={(e) => { const d = Number(e.target.value); setDays(d); scan(d) }} disabled={loading}>
-            {[7, 14, 30, 60, 90, 180, 365].map((d) => <option key={d} value={d}>{d} يوم</option>)}
+            {[7, 14, 30, 60, 90, 180, 365].map((d) => <option key={d} value={d}>{t('od.daysN', { n: fmtNum(d) })}</option>)}
           </select>
         </label>
         <button className="btn" onClick={() => scan()} disabled={loading}>
-          <Icon name="refresh" size={15} /> إعادة الفحص
+          <Icon name="refresh" size={15} /> {t('common.rescan')}
         </button>
         <button className="btn btn-ghost" onClick={() => folder && window.api.fm.openPath(folder)} disabled={!folder}>
-          <Icon name="folderOpen" size={15} /> فتح مجلد التنزيلات
+          <Icon name="folderOpen" size={15} /> {t('od.openFolder')}
         </button>
         <div className="spacer" />
         {items.length > 0 && (
           <button className="btn btn-sm" onClick={() => setSelected(selected.size === items.length ? new Set() : new Set(items.map((i) => i.path)))}>
-            {selected.size === items.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+            {t(selected.size === items.length ? 'od.clearAll' : 'common.selectAll')}
           </button>
         )}
         <button className="btn btn-danger" disabled={selected.size === 0} onClick={trash}>
-          <Icon name="trash" size={15} /> نقل إلى المهملات ({formatBytes(selectedBytes)})
+          <Icon name="trash" size={15} /> {t('od.trashBtn', { size: formatBytes(selectedBytes) })}
         </button>
       </div>
 
       <div className="grid grid-3" style={{ marginBottom: 16 }}>
         <div className="card card-pad stat-tile">
-          <span className="label"><Icon name="download" size={14} /> عناصر قديمة</span>
-          <span className="value">{loading ? '…' : items.length}</span>
+          <span className="label"><Icon name="download" size={14} /> {t('od.oldItems')}</span>
+          <span className="value">{loading ? '…' : fmtNum(items.length)}</span>
         </div>
         <div className="card card-pad stat-tile">
-          <span className="label"><Icon name="hardDrive" size={14} /> حجمها الإجمالي</span>
+          <span className="label"><Icon name="hardDrive" size={14} /> {t('od.theirSize')}</span>
           <span className="value">{loading ? '…' : formatBytes(total)}</span>
         </div>
         <div className="card card-pad stat-tile">
-          <span className="label"><Icon name="calendar" size={14} /> الأقدم</span>
+          <span className="label"><Icon name="calendar" size={14} /> {t('od.oldest')}</span>
           <span className="value" style={{ fontSize: 18 }}>
-            {items.length ? `${Math.max(...items.map((i) => i.ageDays))} يوم` : '—'}
+            {items.length ? t('od.daysN', { n: fmtNum(Math.max(...items.map((i) => i.ageDays))) }) : '—'}
           </span>
         </div>
       </div>
@@ -120,7 +122,7 @@ export function OldDownloads({ settings }: { settings: AppSettings | null }): JS
       {!loading && items.length === 0 ? (
         <div className="empty-state">
           <div className="tile-icon tone-cyan"><Icon name="download" size={26} /></div>
-          <div>لا شيء أقدم من {days} يومًا في مجلد التنزيلات</div>
+          <div>{t('od.none', { n: fmtNum(days) })}</div>
         </div>
       ) : (
         <div className="card">
@@ -128,10 +130,10 @@ export function OldDownloads({ settings }: { settings: AppSettings | null }): JS
             <thead>
               <tr>
                 <th style={{ width: 36 }} />
-                <th>الاسم</th>
-                <th>آخر تعديل</th>
-                <th>العمر</th>
-                <th>الحجم</th>
+                <th>{t('common.name')}</th>
+                <th>{t('od.thModified')}</th>
+                <th>{t('od.thAge')}</th>
+                <th>{t('common.size')}</th>
               </tr>
             </thead>
             <tbody>
@@ -145,7 +147,7 @@ export function OldDownloads({ settings }: { settings: AppSettings | null }): JS
                   </td>
                   <td className="muted">{formatDate(d.modifiedAt)}</td>
                   <td>
-                    <span className={`badge ${d.ageDays > 180 ? 'badge-danger' : d.ageDays > 60 ? 'badge-caution' : 'badge-neutral'}`}>{d.ageDays} يوم</span>
+                    <span className={`badge ${d.ageDays > 180 ? 'badge-danger' : d.ageDays > 60 ? 'badge-caution' : 'badge-neutral'}`}>{t('od.daysN', { n: fmtNum(d.ageDays) })}</span>
                   </td>
                   <td style={{ fontVariantNumeric: 'tabular-nums' }}>{formatBytes(d.sizeBytes)}</td>
                 </tr>

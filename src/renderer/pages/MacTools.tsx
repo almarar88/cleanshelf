@@ -4,6 +4,8 @@ import type { OrphanLeftover, LanguageFileGroup, ScanProgress } from '../../shar
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
 import { ScanProgressPanel } from '../components/ScanProgressPanel'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 type Mode = 'orphans' | 'languages'
 
@@ -28,15 +30,15 @@ export function MacTools(): JSX.Element {
       if (which === 'orphans') {
         const result = await window.api.mac.orphanLeftovers()
         setOrphans(result)
-        if (result.length === 0) showToast('لا توجد مخلّفات يتيمة')
+        if (result.length === 0) showToast(t('mt.noOrphans'))
       } else {
         const result = await window.api.mac.languageFiles()
         setLanguages(result)
-        if (result.length === 0) showToast('لا توجد ملفات لغات قابلة للحذف')
+        if (result.length === 0) showToast(t('mt.noLangs'))
       }
     } catch (err) {
       const message = (err as Error).message
-      showToast(message.includes('أُلغي') ? 'أُوقف الفحص' : 'فشل الفحص: ' + message)
+      showToast(/أُلغي|cancel/i.test(message) ? t('du.stopped') : t('mt.scanFailed', { msg: message }))
     } finally {
       setScanning(false)
       setProgress(null)
@@ -65,8 +67,8 @@ export function MacTools(): JSX.Element {
         : languages.filter((g) => checked.has(g.appPath)).flatMap((g) => g.languagePaths)
 
     const confirmed = await window.api.dialogs.confirm(
-      `نقل ${paths.length} عنصر إلى المهملات؟`,
-      `سيتحرّر نحو ${formatBytes(totalSelected)}. يمكنك استرجاعها من المهملات.`
+      t('mt.trashConfirm', { n: fmtNum(paths.length) }),
+      t('mt.trashDetail', { size: formatBytes(totalSelected) })
     )
     if (!confirmed) return
 
@@ -74,8 +76,8 @@ export function MacTools(): JSX.Element {
     const failed = results.filter((r) => !r.success)
     showToast(
       failed.length
-        ? `حُذف ${results.length - failed.length}، وتعذّر ${failed.length} (قد تحتاج صلاحيات)`
-        : `تم حذف ${results.length} عنصر`
+        ? t('mt.partial', { ok: fmtNum(results.length - failed.length), fail: fmtNum(failed.length) })
+        : t('mt.deleted', { n: fmtNum(results.length) })
     )
     await scan(mode)
   }
@@ -99,27 +101,27 @@ export function MacTools(): JSX.Element {
             setChecked(new Set())
           }}
         >
-          <option value="orphans">مخلّفات تطبيقات محذوفة</option>
-          <option value="languages">ملفات اللغات غير المستخدمة</option>
+          <option value="orphans">{t('mt.modeOrphans')}</option>
+          <option value="languages">{t('mt.modeLanguages')}</option>
         </select>
         <button className="btn btn-primary" onClick={() => scan(mode)} disabled={scanning}>
-          <Icon name="search" size={15} /> ابدأ الفحص
+          <Icon name="search" size={15} /> {t('mt.startScan')}
         </button>
         <div className="spacer" />
         <button className="btn btn-sm" onClick={purge}>
-          <Icon name="brain" size={15} /> تحرير الذاكرة
+          <Icon name="brain" size={15} /> {t('mt.purge')}
         </button>
         {items.length > 0 && (
           <button className="btn btn-danger" disabled={checked.size === 0} onClick={deleteChecked}>
-            حذف المحدَّد ({formatBytes(totalSelected)})
+            {t('mt.deleteSel', { size: formatBytes(totalSelected) })}
           </button>
         )}
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16, fontSize: 13 }}>
         {mode === 'orphans'
-          ? 'سحب تطبيق إلى المهملات على ماك لا يحذف ما تركه في Library. هنا نعرض ملفات دعم لتطبيقات لم تعد مثبَّتة — راجعها قبل الحذف، فالمطابقة بالاسم قد تُخطئ أحيانًا.'
-          : 'تحمل معظم التطبيقات عشرات اللغات التي لن تستخدمها. نُبقي دائمًا الإنجليزية والعربية، ونعرض الباقي. قد يعيد تحديث التطبيق إضافتها.'}
+          ? t('mt.orphansNote')
+          : t('mt.langsNote')}
       </div>
 
       {scanning ? (
@@ -127,7 +129,7 @@ export function MacTools(): JSX.Element {
       ) : items.length === 0 ? (
         <div className="empty-state">
           <div className="tile-icon tone-teal"><Icon name={mode === 'orphans' ? 'sparkles' : 'globe'} size={26} /></div>
-          <div>اضغط "ابدأ الفحص" لبدء البحث</div>
+          <div>{t('mt.empty')}</div>
         </div>
       ) : (
         <div className="card">
@@ -135,9 +137,9 @@ export function MacTools(): JSX.Element {
             <thead>
               <tr>
                 <th style={{ width: 36 }} />
-                <th>{mode === 'orphans' ? 'العنصر' : 'التطبيق'}</th>
-                <th>{mode === 'orphans' ? 'الموقع' : 'عدد اللغات'}</th>
-                <th>الحجم</th>
+                <th>{t(mode === 'orphans' ? 'mt.thItem' : 'mt.thApp')}</th>
+                <th>{t(mode === 'orphans' ? 'mt.thLocation' : 'mt.thLangCount')}</th>
+                <th>{t('common.size')}</th>
               </tr>
             </thead>
             <tbody>
@@ -174,7 +176,7 @@ export function MacTools(): JSX.Element {
                         />
                       </td>
                       <td style={{ fontWeight: 600 }}>{g.appName}</td>
-                      <td className="muted">{g.languagePaths.length} لغة</td>
+                      <td className="muted">{t('mt.langsN', { n: fmtNum(g.languagePaths.length) })}</td>
                       <td>{formatBytes(g.sizeBytes)}</td>
                     </tr>
                   ))}

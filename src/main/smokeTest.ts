@@ -161,14 +161,36 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
 
   await check('التنزيلات القديمة', async () => `${(await findOldDownloads(30)).length} عنصر`)
 
-  // 4) الواجهة الجديدة: لوحة الأوامر وزر البحث والإعدادات وصلت للشاشة
+  // 4) عناصر التصميم الجديد وصلت للشاشة فعلًا
   await check('عناصر الواجهة الجديدة', async () =>
     retry(async () => {
       const found = await win.webContents.executeJavaScript(
-        '[!!document.querySelector(".search-trigger"), !!document.querySelector(".hero"), !!document.querySelector(".brand-badge svg")].join(",")'
+        '[!!document.querySelector(".search-trigger"), !!document.querySelector(".tile.yellow"), !!document.querySelector(".score-ring svg"), !!document.querySelector(".brand-badge svg")].join(",")'
       )
-      if (found !== 'true,true,true') throw new Error(`عناصر ناقصة: ${found}`)
-      return 'زر البحث، بطاقة الصحة، وشعار SVG'
+      if (found !== 'true,true,true,true') throw new Error(`عناصر ناقصة: ${found}`)
+      return 'زر البحث، بطاقة الخطة، حلقة الصحة، وشعار SVG'
+    })
+  )
+
+  // 5) اللغة تنقلب فعلًا بالضغط على زرّها كما يفعل المستخدم
+  await check('تبديل اللغة', async () =>
+    retry(async () => {
+      const before = await win.webContents.executeJavaScript(
+        "[document.querySelector('.topbar h1')?.textContent?.trim() ?? '', document.documentElement.dir].join('|')"
+      )
+      await win.webContents.executeJavaScript(
+        "document.querySelectorAll('.topbar-actions .btn-icon')[0].click()"
+      )
+      await new Promise((r) => setTimeout(r, 900))
+      const after = await win.webContents.executeJavaScript(
+        "[document.querySelector('.topbar h1')?.textContent?.trim() ?? '', document.documentElement.dir].join('|')"
+      )
+      const [beforeTitle, beforeDir] = String(before).split('|')
+      const [afterTitle, afterDir] = String(after).split('|')
+      if (afterDir === beforeDir || afterTitle === beforeTitle) {
+        throw new Error(`لم تنقلب اللغة: ${before} ← ${after}`)
+      }
+      return `${beforeTitle} (${beforeDir}) ← ${afterTitle} (${afterDir})`
     })
   )
 

@@ -6,6 +6,8 @@ import { formatBytes, formatDate } from '../lib/format'
 import { useToast } from '../lib/toastContext'
 import { BatchRenameModal } from '../components/BatchRenameModal'
 import { InputModal } from '../components/InputModal'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 function extIcon(entry: FileEntry): IconName {
   if (entry.isDirectory) return 'folder'
@@ -44,7 +46,7 @@ export function FileManager(): JSX.Element {
       setSearchResults(await window.api.fm.search(listing.path, query))
     } catch (err) {
       const message = (err as Error).message
-      showToast(message.includes('أُلغي') ? 'أُوقف البحث' : 'فشل البحث: ' + message)
+      showToast(/أُلغي|cancel/i.test(message) ? t('fm.searchStopped') : t('fm.searchFailed', { msg: message }))
     } finally {
       setSearching(false)
       setSearchProgress(null)
@@ -57,7 +59,7 @@ export function FileManager(): JSX.Element {
     try {
       setListing(await window.api.fm.list(targetPath))
     } catch (err) {
-      showToast('تعذّر فتح المسار: ' + (err as Error).message)
+      showToast(t('fm.openFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -80,13 +82,13 @@ export function FileManager(): JSX.Element {
   async function handleDelete(): Promise<void> {
     if (selected.size === 0) return
     const confirmed = await window.api.dialogs.confirm(
-      `نقل ${selected.size} عنصر إلى سلة المحذوفات؟`,
-      'يمكنك استعادتها لاحقًا من سلة المحذوفات.'
+      t('fm.trashConfirm', { n: fmtNum(selected.size) }),
+      t('fm.trashDetail')
     )
     if (!confirmed) return
     const results = await window.api.fm.delete([...selected])
     const failed = results.filter((r) => !r.success)
-    showToast(failed.length ? `تم الحذف مع ${failed.length} فشل` : 'تم النقل إلى سلة المحذوفات')
+    showToast(failed.length ? t('fm.trashedPartial', { n: fmtNum(failed.length) }) : t('fm.trashed'))
     if (listing) open(listing.path)
   }
 
@@ -97,7 +99,7 @@ export function FileManager(): JSX.Element {
       await window.api.fm.rename(entry.path, newName)
       if (listing) open(listing.path)
     } catch (err) {
-      showToast('فشل إعادة التسمية: ' + (err as Error).message)
+      showToast(t('fm.renameFailed', { msg: (err as Error).message }))
     }
   }
 
@@ -108,7 +110,7 @@ export function FileManager(): JSX.Element {
       await window.api.fm.createFolder(listing.path, name)
       open(listing.path)
     } catch (err) {
-      showToast('فشل إنشاء المجلد: ' + (err as Error).message)
+      showToast(t('fm.mkdirFailed', { msg: (err as Error).message }))
     }
   }
 
@@ -124,25 +126,25 @@ export function FileManager(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn" disabled={!listing?.parent} onClick={() => open(listing!.parent)}>
-          <Icon name="arrowUp" size={15} /> للأعلى
+          <Icon name="arrowUp" size={15} /> {t('da.up')}
         </button>
         <button className="btn" disabled={!listing?.path} onClick={() => setShowNewFolder(true)}>
-          <Icon name="plus" size={15} /> مجلد جديد
+          <Icon name="plus" size={15} /> {t('fm.newFolder')}
         </button>
         <button className="btn" disabled={selected.size === 0} onClick={handleDelete}>
-          <Icon name="trash" size={15} /> نقل إلى سلة المحذوفات
+          <Icon name="trash" size={15} /> {t('fm.toTrash')}
         </button>
         <button
           className="btn"
           disabled={selectedFileEntries.length === 0}
           onClick={() => setShowBatchRename(true)}
         >
-          <Icon name="type" size={15} /> إعادة تسمية دفعية
+          <Icon name="type" size={15} /> {t('fm.batchRename')}
         </button>
         <div className="spacer" />
         <input
           type="search"
-          placeholder="ابحث داخل هذا المجلد وما تحته…"
+          placeholder={t('fm.searchPh')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && runSearch()}
@@ -154,20 +156,20 @@ export function FileManager(): JSX.Element {
           onClick={runSearch}
           disabled={!listing?.path || !searchQuery.trim() || searching}
         >
-          <Icon name="search" size={15} /> بحث
+          <Icon name="search" size={15} /> {t('common.search')}
         </button>
         {searchResults && (
           <button className="btn btn-sm btn-ghost" onClick={() => setSearchResults(null)}>
-            <Icon name="x" size={14} /> إلغاء نتائج البحث
+            <Icon name="x" size={14} /> {t('fm.clearSearch')}
           </button>
         )}
-        <span className="muted">{selected.size > 0 ? `محدَّد: ${selected.size}` : ''}</span>
+        <span className="muted">{selected.size > 0 ? t('fm.selectedN', { n: fmtNum(selected.size) }) : ''}</span>
       </div>
 
       {listing?.path && (
         <div className="breadcrumbs">
           <span className="crumb" onClick={() => open(null)}>
-            الأقراص
+            {t('fm.drives')}
           </span>
           {crumbs.map((c, i) => {
             const partial = crumbs.slice(0, i + 1).join('\\')
@@ -191,13 +193,13 @@ export function FileManager(): JSX.Element {
       ) : searchResults ? (
         <div className="card">
           {searchResults.length === 0 ? (
-            <div className="empty-state">لا نتائج مطابقة</div>
+            <div className="empty-state">{t('fm.noMatches')}</div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>نتائج البحث ({searchResults.length})</th>
-                  <th>الحجم</th>
+                  <th>{t('fm.searchResults', { n: fmtNum(searchResults.length) })}</th>
+                  <th>{t('common.size')}</th>
                   <th />
                 </tr>
               </thead>
@@ -208,7 +210,7 @@ export function FileManager(): JSX.Element {
                     <td>{formatBytes(r.sizeBytes)}</td>
                     <td>
                       <button className="btn btn-sm" onClick={() => window.api.fm.reveal(r.path)}>
-                        إظهار
+                        {t('lf.reveal')}
                       </button>
                     </td>
                   </tr>
@@ -220,7 +222,7 @@ export function FileManager(): JSX.Element {
       ) : (
       <div className="card">
         {loading ? (
-          <div className="empty-state">جارٍ التحميل…</div>
+          <div className="empty-state">{t('common.loading')}</div>
         ) : !listing?.path ? (
           <div style={{ padding: 16 }} className="grid grid-4">
             {(listing?.drives || []).map((d) => (
@@ -230,15 +232,15 @@ export function FileManager(): JSX.Element {
             ))}
           </div>
         ) : listing.entries.length === 0 ? (
-          <div className="empty-state">المجلد فارغ</div>
+          <div className="empty-state">{t('fm.emptyFolder')}</div>
         ) : (
           <table>
             <thead>
               <tr>
                 <th style={{ width: 36 }} />
-                <th>الاسم</th>
-                <th>الحجم</th>
-                <th>آخر تعديل</th>
+                <th>{t('common.name')}</th>
+                <th>{t('common.size')}</th>
+                <th>{t('od.thModified')}</th>
                 <th />
               </tr>
             </thead>
@@ -264,14 +266,14 @@ export function FileManager(): JSX.Element {
                   <td className="muted">{formatDate(entry.modifiedAt)}</td>
                   <td>
                     <button className="btn btn-sm" onClick={() => setRenameTarget(entry)}>
-                      إعادة تسمية
+                      {t('fm.rename')}
                     </button>
                     <button
                       className="btn btn-sm"
                       style={{ marginRight: 6 }}
                       onClick={() => window.api.fm.reveal(entry.path)}
                     >
-                      إظهار
+                      {t('lf.reveal')}
                     </button>
                   </td>
                 </tr>
@@ -284,9 +286,9 @@ export function FileManager(): JSX.Element {
 
       {renameTarget && (
         <InputModal
-          title="إعادة تسمية"
+          title={t('fm.rename')}
           initialValue={renameTarget.name}
-          confirmLabel="إعادة تسمية"
+          confirmLabel={t('fm.rename')}
           onConfirm={(name) => handleRename(renameTarget, name)}
           onCancel={() => setRenameTarget(null)}
         />
@@ -294,9 +296,9 @@ export function FileManager(): JSX.Element {
 
       {showNewFolder && (
         <InputModal
-          title="اسم المجلد الجديد"
-          initialValue="مجلد جديد"
-          confirmLabel="إنشاء"
+          title={t('fm.newFolderTitle')}
+          initialValue={t('fm.newFolder')}
+          confirmLabel={t('fm.create')}
           onConfirm={handleNewFolder}
           onCancel={() => setShowNewFolder(false)}
         />
