@@ -1911,3 +1911,49 @@ textarea:focus {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* نفس تجاوزات الوضع الداكن حين يتبع النظام بلا اختيار صريح */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .route .path {
+    stroke: var(--text);
+  }
+
+  :root:not([data-theme='light']) .week-bars .col b {
+    background: var(--yellow);
+  }
+
+  :root:not([data-theme='light']) .tone-ink {
+    --tone: #d8d2c6;
+  }
+
+  :root:not([data-theme='light']) .btn-dark {
+    background: var(--yellow);
+    border-color: var(--yellow);
+    color: var(--ink);
+  }
+
+  :root:not([data-theme='light']) .switch.on {
+    background: var(--yellow);
+  }
+
+  :root:not([data-theme='light']) .segmented button.active {
+    background: var(--yellow);
+    color: var(--ink);
+  }
+
+  :root:not([data-theme='light']) .bar > div {
+    background: var(--yellow);
+  }
+
+  :root:not([data-theme='light']) .toast {
+    background: var(--surface-3);
+  }
+
+  :root:not([data-theme='light']) .orb .ring {
+    border-top-color: var(--yellow); border-inline-end-color: var(--yellow);
+  }
+
+  :root:not([data-theme='light']) .orb .core {
+    color: var(--yellow);
+  }
+}
