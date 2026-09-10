@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Icon } from '../components/Icon'
 import type { StartupItem } from '../../shared/types'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 const LOCATION_LABEL: Record<StartupItem['location'], string> = {
-  'HKCU-Run': 'المستخدم الحالي (Run)',
-  'HKLM-Run': 'كل المستخدمين (Run)',
-  'StartupFolder-User': 'مجلد بدء التشغيل (المستخدم)',
-  'StartupFolder-Common': 'مجلد بدء التشغيل (مشترك)'
+  'HKCU-Run': 'su.HKCU-Run',
+  'HKLM-Run': 'su.HKLM-Run',
+  'StartupFolder-User': 'su.StartupFolder-User',
+  'StartupFolder-Common': 'su.StartupFolder-Common'
 }
 
 export function Startup(): JSX.Element {
@@ -21,7 +23,7 @@ export function Startup(): JSX.Element {
     try {
       setItems(await window.api.startup.list())
     } catch (err) {
-      showToast('فشل جلب برامج بدء التشغيل: ' + (err as Error).message)
+      showToast(t('su.loadFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -38,21 +40,21 @@ export function Startup(): JSX.Element {
       await window.api.startup.setEnabled(item, !item.enabled)
       await load()
     } catch (err) {
-      showToast('فشلت العملية: ' + (err as Error).message)
+      showToast(t('su.opFailed', { msg: (err as Error).message }))
     } finally {
       setBusyId(null)
     }
   }
 
   async function remove(item: StartupItem): Promise<void> {
-    const confirmed = await window.api.dialogs.confirm(`حذف "${item.name}" نهائيًا من بدء التشغيل؟`)
+    const confirmed = await window.api.dialogs.confirm(t('su.deleteConfirm', { name: item.name }))
     if (!confirmed) return
     setBusyId(item.id)
     try {
       await window.api.startup.remove(item)
       await load()
     } catch (err) {
-      showToast('فشل الحذف: ' + (err as Error).message)
+      showToast(t('su.deleteFailed', { msg: (err as Error).message }))
     } finally {
       setBusyId(null)
     }
@@ -61,10 +63,10 @@ export function Startup(): JSX.Element {
   return (
     <div className="page">
       <div className="toolbar">
-        <span className="muted">{loading ? 'جارٍ التحميل…' : `${items.length} عنصر`}</span>
+        <span className="muted">{loading ? t('common.loading') : t('su.count', { n: fmtNum(items.length) })}</span>
         <div className="spacer" />
         <button className="btn" onClick={load} disabled={loading}>
-          <Icon name="refresh" size={15} /> تحديث
+          <Icon name="refresh" size={15} /> {t('common.refresh')}
         </button>
       </div>
 
@@ -72,10 +74,10 @@ export function Startup(): JSX.Element {
         <table>
           <thead>
             <tr>
-              <th>الاسم</th>
-              <th>الأمر / المسار</th>
-              <th>الموقع</th>
-              <th>الحالة</th>
+              <th>{t('common.name')}</th>
+              <th>{t('su.thCommand')}</th>
+              <th>{t('su.thLocation')}</th>
+              <th>{t('common.status')}</th>
               <th />
             </tr>
           </thead>
@@ -86,10 +88,10 @@ export function Startup(): JSX.Element {
                 <td className="muted" style={{ fontSize: 12, wordBreak: 'break-all', maxWidth: 320 }}>
                   {item.command}
                 </td>
-                <td className="muted">{LOCATION_LABEL[item.location]}</td>
+                <td className="muted">{t(LOCATION_LABEL[item.location])}</td>
                 <td>
                   <span className={`badge ${item.enabled ? 'badge-safe' : 'badge-caution'}`}>
-                    {item.enabled ? 'مفعّل' : 'معطّل'}
+                    {t(item.enabled ? 'su.enabled' : 'su.disabled')}
                   </span>
                 </td>
                 <td>
@@ -98,7 +100,7 @@ export function Startup(): JSX.Element {
                     disabled={busyId === item.id}
                     onClick={() => toggleEnabled(item)}
                   >
-                    {item.enabled ? 'تعطيل' : 'تفعيل'}
+                    {t(item.enabled ? 'su.disable' : 'su.enable')}
                   </button>
                   <button
                     className="btn btn-sm btn-danger"
@@ -106,7 +108,7 @@ export function Startup(): JSX.Element {
                     disabled={busyId === item.id}
                     onClick={() => remove(item)}
                   >
-                    حذف
+                    {t('common.delete')}
                   </button>
                 </td>
               </tr>

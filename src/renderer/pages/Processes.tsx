@@ -3,6 +3,8 @@ import { Icon } from '../components/Icon'
 import type { ProcessEntry } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 type SortKey = 'memoryBytes' | 'cpuPercent' | 'name'
 
@@ -18,7 +20,7 @@ export function Processes(): JSX.Element {
     try {
       setProcesses(await window.api.proc.list())
     } catch (err) {
-      showToast('تعذّر جلب العمليات: ' + (err as Error).message)
+      showToast(t('pr.failed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -49,8 +51,8 @@ export function Processes(): JSX.Element {
 
   async function kill(p: ProcessEntry): Promise<void> {
     const confirmed = await window.api.dialogs.confirm(
-      `إنهاء العملية "${p.name}"؟`,
-      'قد تفقد أي عمل غير محفوظ في هذا البرنامج. لا تُنهِ عمليات النظام إن لم تكن متأكدًا.'
+      t('pr.killConfirm', { name: p.name }),
+      t('pr.killDetail')
     )
     if (!confirmed) return
     const result = await window.api.proc.kill(p.pid)
@@ -63,15 +65,15 @@ export function Processes(): JSX.Element {
       <div className="toolbar">
         <input
           type="search"
-          placeholder="ابحث باسم العملية…"
+          placeholder={t('pr.searchPh')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ width: 240 }}
         />
         <select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
-          <option value="memoryBytes">ترتيب حسب الذاكرة</option>
-          <option value="cpuPercent">ترتيب حسب المعالج</option>
-          <option value="name">ترتيب حسب الاسم</option>
+          <option value="memoryBytes">{t('pr.sortMem')}</option>
+          <option value="cpuPercent">{t('pr.sortCpu')}</option>
+          <option value="name">{t('pr.sortName')}</option>
         </select>
         <label className="checkbox-row" style={{ fontSize: 13 }}>
           <input
@@ -79,14 +81,14 @@ export function Processes(): JSX.Element {
             checked={autoRefresh}
             onChange={(e) => setAutoRefresh(e.target.checked)}
           />
-          تحديث تلقائي
+          {t('pr.autoRefresh')}
         </label>
         <div className="spacer" />
         <span className="muted">
-          {loading ? 'جارٍ التحميل…' : `${visible.length} عملية — ${formatBytes(totalMemory)}`}
+          {loading ? t('common.loading') : t('pr.count', { n: fmtNum(visible.length), size: formatBytes(totalMemory) })}
         </span>
         <button className="btn btn-sm" onClick={load}>
-          <Icon name="refresh" size={15} /> تحديث
+          <Icon name="refresh" size={15} /> {t('common.refresh')}
         </button>
       </div>
 
@@ -94,11 +96,11 @@ export function Processes(): JSX.Element {
         <table>
           <thead>
             <tr>
-              <th>الاسم</th>
-              <th>المعرّف</th>
-              <th>المعالج</th>
-              <th>الذاكرة</th>
-              <th>المستخدم</th>
+              <th>{t('common.name')}</th>
+              <th>{t('pr.thPid')}</th>
+              <th>{t('dash.cpu')}</th>
+              <th>{t('pr.thMem')}</th>
+              <th>{t('pr.thUser')}</th>
               <th />
             </tr>
           </thead>
@@ -112,7 +114,7 @@ export function Processes(): JSX.Element {
                 <td className="muted">{p.user || '—'}</td>
                 <td>
                   <button className="btn btn-sm btn-danger" onClick={() => kill(p)}>
-                    إنهاء
+                    {t('pr.kill')}
                   </button>
                 </td>
               </tr>

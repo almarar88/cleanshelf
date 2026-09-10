@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { SystemSummary } from '../../shared/types'
 import { formatBytes } from '../lib/format'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 export function SystemInfo(): JSX.Element {
   const [summary, setSummary] = useState<SystemSummary | null>(null)
@@ -16,7 +18,7 @@ export function SystemInfo(): JSX.Element {
   if (error) {
     return (
       <div className="page">
-        <div className="empty-state">تعذّر جلب معلومات النظام: {error}</div>
+        <div className="empty-state">{t('si.failed', { msg: error })}</div>
       </div>
     )
   }
@@ -24,7 +26,7 @@ export function SystemInfo(): JSX.Element {
   if (!summary) {
     return (
       <div className="page">
-        <div className="empty-state">جارٍ التحميل…</div>
+        <div className="empty-state">{t('common.loading')}</div>
       </div>
     )
   }
@@ -33,30 +35,30 @@ export function SystemInfo(): JSX.Element {
     <div className="page">
       <div className="grid grid-2" style={{ marginBottom: 20 }}>
         <div className="card card-pad">
-          <h3 style={{ marginTop: 0 }}>النظام</h3>
-          <InfoRow label="الجهاز" value={summary.hostname} />
-          <InfoRow label="نظام التشغيل" value={summary.osName} />
-          <InfoRow label="الإصدار" value={summary.osVersion} />
-          <InfoRow label="مدة التشغيل" value={`${Math.floor(summary.uptimeSec / 3600)} ساعة`} />
+          <h3 style={{ marginTop: 0 }}>{t('si.system')}</h3>
+          <InfoRow label={t('si.host')} value={summary.hostname} />
+          <InfoRow label={t('si.os')} value={summary.osName} />
+          <InfoRow label={t('si.version')} value={summary.osVersion} />
+          <InfoRow label={t('dash.uptime')} value={t('dash.hoursShort', { n: fmtNum(Math.floor(summary.uptimeSec / 3600)) })} />
         </div>
         <div className="card card-pad">
-          <h3 style={{ marginTop: 0 }}>المعالج والذاكرة</h3>
-          <InfoRow label="المعالج" value={summary.cpuModel} />
-          <InfoRow label="نسبة الاستخدام" value={`${summary.cpuLoadPercent}%`} />
-          <InfoRow label="الذاكرة المستخدمة" value={formatBytes(summary.usedMemBytes)} />
-          <InfoRow label="إجمالي الذاكرة" value={formatBytes(summary.totalMemBytes)} />
+          <h3 style={{ marginTop: 0 }}>{t('si.cpuMem')}</h3>
+          <InfoRow label={t('dash.cpu')} value={summary.cpuModel} />
+          <InfoRow label={t('si.usage')} value={`${fmtNum(summary.cpuLoadPercent)}%`} />
+          <InfoRow label={t('dash.memUsed')} value={formatBytes(summary.usedMemBytes)} />
+          <InfoRow label={t('si.totalMem')} value={formatBytes(summary.totalMemBytes)} />
         </div>
       </div>
 
       <div className="card card-pad">
-        <h3 style={{ marginTop: 0 }}>الأقراص</h3>
+        <h3 style={{ marginTop: 0 }}>{t('si.disks')}</h3>
         <table>
           <thead>
             <tr>
-              <th>القرص</th>
-              <th>المستخدم</th>
-              <th>الحر</th>
-              <th>الإجمالي</th>
+              <th>{t('si.thDisk')}</th>
+              <th>{t('si.thUsed')}</th>
+              <th>{t('si.thFree')}</th>
+              <th>{t('common.total')}</th>
             </tr>
           </thead>
           <tbody>

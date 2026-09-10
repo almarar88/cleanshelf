@@ -4,6 +4,8 @@ import type { CleanerCategory, CleanProgress } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { categoryLabel } from '../lib/labels'
 import { useToast } from '../lib/toastContext'
+import { getLang, t } from '../lib/i18n'
+import { fmtNum } from '../lib/format'
 
 export function Cleaner(): JSX.Element {
   const { showToast } = useToast()
@@ -25,7 +27,7 @@ export function Cleaner(): JSX.Element {
       setCategories(result.categories)
       setSelected(new Set(result.categories.filter((c) => c.risk === 'safe' && c.sizeBytes > 0).map((c) => c.id)))
     } catch (err) {
-      showToast('فشل الفحص: ' + (err as Error).message)
+      showToast(t('cl.scanFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -64,18 +66,18 @@ export function Cleaner(): JSX.Element {
     setCleaning(true)
     try {
       if (makeRestorePoint) {
-        showToast('جارٍ إنشاء نقطة استعادة… قد يستغرق دقيقة')
+        showToast(t('cl.restorePoint'))
         const rp = await window.api.history.restorePoint()
         if (!rp.success) {
-          showToast('تعذّر إنشاء نقطة الاستعادة: ' + rp.message)
+          showToast(t('cl.restoreFailed', { msg: rp.message }))
         }
       }
       const ids = [...selected]
       const { totalFreedBytes } = await window.api.cleaner.clean(ids)
-      showToast(`تم تحرير ${formatBytes(totalFreedBytes)} من المساحة`)
+      showToast(t('cl.freed', { size: formatBytes(totalFreedBytes) }))
       await scan()
     } catch (err) {
-      showToast('حدث خطأ أثناء التنظيف: ' + (err as Error).message)
+      showToast(t('cl.cleanError', { msg: (err as Error).message }))
     } finally {
       setCleaning(false)
     }
@@ -95,23 +97,23 @@ export function Cleaner(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn" onClick={scan} disabled={loading || cleaning}>
-          <Icon name="refresh" size={15} /> إعادة الفحص
+          <Icon name="refresh" size={15} /> {t('common.rescan')}
         </button>
         <span className="muted">
-          {loading ? 'جارٍ الفحص…' : `${categories.length} فئة، الإجمالي القابل للتنظيف ${formatBytes(
-            categories.reduce((s, c) => s + c.sizeBytes, 0)
-          )}`}
+          {loading
+            ? t('common.scanning')
+            : t('cl.summary', { n: fmtNum(categories.length), size: formatBytes(categories.reduce((s, c) => s + c.sizeBytes, 0)) })}
         </span>
         <div className="spacer" />
         <div className="card-pad" style={{ padding: '6px 14px' }}>
-          محدَّد: <strong>{formatBytes(selectedSizeBytes)}</strong>
+          {t('cl.selectedLabel')} <strong>{formatBytes(selectedSizeBytes)}</strong>
         </div>
         <button
           className="btn btn-primary"
           disabled={selected.size === 0 || cleaning || loading}
           onClick={() => setShowConfirm(true)}
         >
-          <Icon name="sparkles" size={15} /> {cleaning ? 'جارٍ التنظيف…' : 'تنظيف المحدَّد'}
+          <Icon name="sparkles" size={15} /> {cleaning ? t('cl.cleaning') : t('cl.cleanSelected')}
         </button>
       </div>
 
@@ -120,15 +122,15 @@ export function Cleaner(): JSX.Element {
           className="card card-pad"
           style={{ marginBottom: 16, borderRight: '3px solid var(--warning)' }}
         >
-          <strong><Icon name="shield" size={14} /> بعض الفئات تحتاج صلاحيات مرتفعة</strong>
+          <strong><Icon name="shield" size={14} /> {t('cl.adminTitle')}</strong>
           <div className="muted" style={{ fontSize: 13, margin: '6px 0 10px' }}>
-            الفئات التالية داخل مجلدات يملكها النظام، ولن يُحذف منها شيء بالصلاحيات الحالية:{' '}
-            {adminCategoriesWithData.map((c) => categoryLabel(c.labelKey).title).join('، ')}.
-            {isMac && ' على ماك لا توجد "إعادة تشغيل كمسؤول"؛ نظّفها من الطرفية أو تخطَّ هذه الفئات.'}
+            {t('cl.adminBody')}{' '}
+            {adminCategoriesWithData.map((c) => categoryLabel(c.labelKey).title).join(getLang() === 'ar' ? '، ' : ', ')}.
+            {isMac && t('cl.adminMac')}
           </div>
           {!isMac && (
             <button className="btn btn-sm" onClick={relaunchAsAdmin}>
-              إعادة تشغيل التطبيق كمسؤول
+              {t('cl.relaunchAdmin')}
             </button>
           )}
         </div>
@@ -139,10 +141,10 @@ export function Cleaner(): JSX.Element {
           <thead>
             <tr>
               <th style={{ width: 36 }} />
-              <th>الفئة</th>
-              <th>الحجم</th>
-              <th>عدد الملفات</th>
-              <th>الحالة</th>
+              <th>{t('cl.thCategory')}</th>
+              <th>{t('common.size')}</th>
+              <th>{t('cl.thFiles')}</th>
+              <th>{t('common.status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -162,10 +164,10 @@ export function Cleaner(): JSX.Element {
                   <td>
                     <div style={{ fontWeight: 600 }}>
                       {label.title}{' '}
-                      {cat.risk === 'caution' && <span className="badge badge-caution">انتبه</span>}{' '}
+                      {cat.risk === 'caution' && <span className="badge badge-caution">{t('cl.caution')}</span>}{' '}
                       {cat.requiresAdmin && !isAdmin && (
-                        <span className="badge badge-caution" title="يحتاج تشغيل التطبيق كمسؤول">
-                          <Icon name="shield" /> مدير
+                        <span className="badge badge-caution" title={t('cl.adminBadgeTip')}>
+                          <Icon name="shield" /> {t('cl.adminBadge')}
                         </span>
                       )}
                     </div>
@@ -178,18 +180,18 @@ export function Cleaner(): JSX.Element {
                   <td>
                     {prog?.done ? (
                       prog.error ? (
-                        <span className="badge badge-danger">فشل</span>
+                        <span className="badge badge-danger">{t('cl.failed')}</span>
                       ) : (
-                        <span className="badge badge-safe">تم تحرير {formatBytes(prog.freedBytes)}</span>
+                        <span className="badge badge-safe">{t('cl.freedBadge', { size: formatBytes(prog.freedBytes) })}</span>
                       )
                     ) : prog ? (
-                      <span className="muted">جارٍ…</span>
+                      <span className="muted">{t('cl.working')}</span>
                     ) : cat.error ? (
                       <span className="badge badge-danger" title={cat.error}>
-                        خطأ
+                        {t('cl.error')}
                       </span>
                     ) : (
-                      <span className="badge badge-safe">جاهز</span>
+                      <span className="badge badge-safe">{t('cl.ready')}</span>
                     )}
                   </td>
                 </tr>
@@ -202,14 +204,13 @@ export function Cleaner(): JSX.Element {
       {showConfirm && (
         <div className="modal-backdrop" onClick={() => setShowConfirm(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>تأكيد التنظيف</h3>
+            <h3>{t('cl.confirmTitle')}</h3>
             <p>
-              سيتم حذف <strong>{formatBytes(selectedSizeBytes)}</strong> من {selected.size} فئة بشكل
-              نهائي (باستثناء سلة المحذوفات التي تُفرَّغ نهائيًا أيضًا).
+              {t('cl.confirmBody', { size: formatBytes(selectedSizeBytes), n: fmtNum(selected.size) })}
             </p>
             {hasCautionSelected && (
               <p style={{ color: 'var(--warning)' }}>
-                <Icon name="alert" size={15} /> اخترت فئات مُعلَّمة "انتبه" — تأكد من فهم تأثيرها قبل المتابعة.
+                <Icon name="alert" size={15} /> {t('cl.confirmCaution')}
               </p>
             )}
             <label className="checkbox-row" style={{ fontSize: 13, marginTop: 10 }}>
@@ -218,15 +219,15 @@ export function Cleaner(): JSX.Element {
                 checked={makeRestorePoint}
                 onChange={(e) => setMakeRestorePoint(e.target.checked)}
               />
-              أنشئ نقطة استعادة نظام أولًا (تحتاج صلاحيات مدير، وقد تستغرق دقيقة)
+              {t('cl.makeRestore')}
             </label>
             <div className="toolbar" style={{ marginTop: 16, marginBottom: 0 }}>
               <div className="spacer" />
               <button className="btn" onClick={() => setShowConfirm(false)}>
-                إلغاء
+                {t('common.cancel')}
               </button>
               <button className="btn btn-primary" onClick={runClean}>
-                تأكيد التنظيف
+                {t('cl.confirmTitle')}
               </button>
             </div>
           </div>

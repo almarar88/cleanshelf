@@ -5,12 +5,14 @@ import { ScanProgressPanel } from '../components/ScanProgressPanel'
 import { formatBytes } from '../lib/format'
 import { basename } from '../lib/pathUtils'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 const THRESHOLDS = [
-  { label: '100 ميغابايت', bytes: 100 * 1024 * 1024 },
-  { label: '500 ميغابايت', bytes: 500 * 1024 * 1024 },
-  { label: '1 غيغابايت', bytes: 1024 * 1024 * 1024 },
-  { label: '5 غيغابايت', bytes: 5 * 1024 * 1024 * 1024 }
+  { bytes: 100 * 1024 * 1024 },
+  { bytes: 500 * 1024 * 1024 },
+  { bytes: 1024 * 1024 * 1024 },
+  { bytes: 5 * 1024 * 1024 * 1024 }
 ]
 
 export function LargeFiles(): JSX.Element {
@@ -39,7 +41,7 @@ export function LargeFiles(): JSX.Element {
       setFiles(await window.api.fm.findLargeFiles(root, minSize))
     } catch (err) {
       const message = (err as Error).message
-      showToast(message.includes('أُلغي') ? 'أُوقف الفحص' : 'فشل البحث: ' + message)
+      showToast(/أُلغي|cancel/i.test(message) ? t('du.stopped') : t('du.failed', { msg: message }))
     } finally {
       setScanning(false)
       setProgress(null)
@@ -57,10 +59,10 @@ export function LargeFiles(): JSX.Element {
 
   async function deleteChecked(): Promise<void> {
     if (checked.size === 0) return
-    const confirmed = await window.api.dialogs.confirm(`نقل ${checked.size} ملف إلى سلة المحذوفات؟`)
+    const confirmed = await window.api.dialogs.confirm(t('lf.trashConfirm', { n: fmtNum(checked.size) }))
     if (!confirmed) return
     const results = await window.api.fm.delete([...checked])
-    showToast(`تم حذف ${results.filter((r) => r.success).length} ملف`)
+    showToast(t('du.deleted', { n: fmtNum(results.filter((r) => r.success).length) }))
     if (folder) runScan(folder, threshold)
   }
 
@@ -68,7 +70,7 @@ export function LargeFiles(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickAndScan} disabled={scanning}>
-          <Icon name="folderOpen" size={15} /> اختر مجلدًا
+          <Icon name="folderOpen" size={15} /> {t('lf.pick')}
         </button>
         <select
           value={threshold}
@@ -78,9 +80,9 @@ export function LargeFiles(): JSX.Element {
             if (folder) runScan(folder, v)
           }}
         >
-          {THRESHOLDS.map((t) => (
-            <option key={t.bytes} value={t.bytes}>
-              أكبر من {t.label}
+          {THRESHOLDS.map((opt) => (
+            <option key={opt.bytes} value={opt.bytes}>
+              {t('lf.biggerThan', { size: formatBytes(opt.bytes) })}
             </option>
           ))}
         </select>
@@ -88,7 +90,7 @@ export function LargeFiles(): JSX.Element {
         <div className="spacer" />
         {files.length > 0 && (
           <button className="btn btn-danger" disabled={checked.size === 0} onClick={deleteChecked}>
-            حذف المحدَّد ({checked.size})
+            {t('du.deleteSel', { n: fmtNum(checked.size) })}
           </button>
         )}
       </div>
@@ -100,15 +102,15 @@ export function LargeFiles(): JSX.Element {
         {files.length === 0 ? (
           <div className="empty-state">
             <div className="tile-icon tone-orange"><Icon name="package" size={26} /></div>
-            <div>اختر مجلدًا لعرض أكبر الملفات فيه</div>
+            <div>{t('lf.empty')}</div>
           </div>
         ) : (
           <table>
             <thead>
               <tr>
                 <th style={{ width: 36 }} />
-                <th>الملف</th>
-                <th>الحجم</th>
+                <th>{t('lf.thFile')}</th>
+                <th>{t('common.size')}</th>
                 <th />
               </tr>
             </thead>
@@ -127,7 +129,7 @@ export function LargeFiles(): JSX.Element {
                   <td>{formatBytes(f.sizeBytes)}</td>
                   <td>
                     <button className="btn btn-sm" onClick={() => window.api.fm.reveal(f.path)}>
-                      إظهار
+                      {t('lf.reveal')}
                     </button>
                   </td>
                 </tr>

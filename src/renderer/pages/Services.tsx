@@ -2,20 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import type { ServiceEntry } from '../../shared/types'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 const STATUS_LABEL: Record<ServiceEntry['status'], string> = {
-  running: 'يعمل',
-  stopped: 'متوقف',
-  paused: 'موقوف مؤقتًا',
-  unknown: 'غير معروف'
+  running: 'sv.running',
+  stopped: 'sv.stopped',
+  paused: 'sv.paused',
+  unknown: 'sv.unknown'
 }
 
 const START_TYPE_LABEL: Record<ServiceEntry['startType'], string> = {
-  boot: 'عند الإقلاع',
-  system: 'نظام',
-  automatic: 'تلقائي',
-  manual: 'يدوي',
-  disabled: 'معطّل',
+  boot: 'sv.boot',
+  system: 'sv.system',
+  automatic: 'sv.automatic',
+  manual: 'sv.manual',
+  disabled: 'sv.disabled',
   unknown: '—'
 }
 
@@ -32,7 +34,7 @@ export function Services(): JSX.Element {
     try {
       setServices(await window.api.svc.list())
     } catch (err) {
-      showToast('تعذّر جلب الخدمات: ' + (err as Error).message)
+      showToast(t('sv.failed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -58,8 +60,8 @@ export function Services(): JSX.Element {
   ): Promise<void> {
     if (action === 'stop') {
       const confirmed = await window.api.dialogs.confirm(
-        `إيقاف الخدمة "${service.displayName}"؟`,
-        'إيقاف خدمات النظام قد يعطّل ميزات في ويندوز حتى إعادة تشغيلها.'
+        t('sv.stopConfirm', { name: service.displayName }),
+        t('sv.stopDetail')
       )
       if (!confirmed) return
     }
@@ -78,7 +80,7 @@ export function Services(): JSX.Element {
       <div className="toolbar">
         <input
           type="search"
-          placeholder="ابحث باسم الخدمة…"
+          placeholder={t('sv.searchPh')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ width: 260 }}
@@ -89,28 +91,27 @@ export function Services(): JSX.Element {
             checked={onlyRunning}
             onChange={(e) => setOnlyRunning(e.target.checked)}
           />
-          العاملة فقط
+          {t('sv.runningOnly')}
         </label>
         <div className="spacer" />
-        <span className="muted">{loading ? 'جارٍ التحميل…' : `${visible.length} خدمة`}</span>
+        <span className="muted">{loading ? t('common.loading') : t('sv.count', { n: fmtNum(visible.length) })}</span>
         <button className="btn btn-sm" onClick={load}>
-          <Icon name="refresh" size={15} /> تحديث
+          <Icon name="refresh" size={15} /> {t('common.refresh')}
         </button>
       </div>
 
       <div className="notice notice-warn">
         <Icon name="alert" size={17} />
-        <div>تشغيل الخدمات وإيقافها يتطلب صلاحيات مرتفعة. الخدمات جزء من عمل النظام الداخلي
-        (خدمات ويندوز أو وظائف launchd على ماك)، فلا توقف خدمة لا تعرف وظيفتها.</div>
+        <div>{t('sv.warn')}</div>
       </div>
 
       <div className="card">
         <table>
           <thead>
             <tr>
-              <th>الخدمة</th>
-              <th>الحالة</th>
-              <th>نوع البدء</th>
+              <th>{t('sv.thService')}</th>
+              <th>{t('common.status')}</th>
+              <th>{t('sv.thStartType')}</th>
               <th />
             </tr>
           </thead>
@@ -125,10 +126,10 @@ export function Services(): JSX.Element {
                 </td>
                 <td>
                   <span className={`badge ${s.status === 'running' ? 'badge-safe' : 'badge-caution'}`}>
-                    {STATUS_LABEL[s.status]}
+                    {t(STATUS_LABEL[s.status])}
                   </span>
                 </td>
-                <td className="muted">{START_TYPE_LABEL[s.startType]}</td>
+                <td className="muted">{t(START_TYPE_LABEL[s.startType])}</td>
                 <td>
                   {s.status === 'running' ? (
                     <>
@@ -137,7 +138,7 @@ export function Services(): JSX.Element {
                         disabled={busy === s.name}
                         onClick={() => control(s, 'stop')}
                       >
-                        إيقاف
+                        {t('sv.stop')}
                       </button>
                       <button
                         className="btn btn-sm"
@@ -145,7 +146,7 @@ export function Services(): JSX.Element {
                         disabled={busy === s.name}
                         onClick={() => control(s, 'restart')}
                       >
-                        إعادة تشغيل
+                        {t('sv.restart')}
                       </button>
                     </>
                   ) : (
@@ -154,7 +155,7 @@ export function Services(): JSX.Element {
                       disabled={busy === s.name || s.startType === 'disabled'}
                       onClick={() => control(s, 'start')}
                     >
-                      تشغيل
+                      {t('sv.start')}
                     </button>
                   )}
                 </td>

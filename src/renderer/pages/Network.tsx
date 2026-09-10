@@ -3,6 +3,8 @@ import { Icon } from '../components/Icon'
 import type { NetworkAdapter, NetworkConnection, PingResult } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 export function Network(): JSX.Element {
   const { showToast } = useToast()
@@ -23,7 +25,7 @@ export function Network(): JSX.Element {
       setAdapters(a)
       setConnections(c)
     } catch (err) {
-      showToast('تعذّر جلب معلومات الشبكة: ' + (err as Error).message)
+      showToast(t('nw.failed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -53,34 +55,34 @@ export function Network(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <span className="muted">
-          {loading ? 'جارٍ التحميل…' : `${adapters.length} محوّل، ${connections.length} اتصال نشط`}
+          {loading ? t('common.loading') : t('nw.count', { a: fmtNum(adapters.length), c: fmtNum(connections.length) })}
         </span>
         <div className="spacer" />
         <button className="btn btn-sm" onClick={flushDns}>
-          <Icon name="sparkles" size={15} /> مسح ذاكرة DNS
+          <Icon name="sparkles" size={15} /> {t('nw.flushDns')}
         </button>
         <button className="btn btn-sm" onClick={load}>
-          <Icon name="refresh" size={15} /> تحديث
+          <Icon name="refresh" size={15} /> {t('common.refresh')}
         </button>
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>اختبار الاتصال</h3>
+        <h3 style={{ marginTop: 0 }}>{t('nw.pingTitle')}</h3>
         <div className="toolbar" style={{ marginBottom: 0 }}>
           <input
             type="text"
             value={pingHost}
             onChange={(e) => setPingHost(e.target.value)}
             style={{ width: 260 }}
-            placeholder="مثال: google.com"
+            placeholder={t('nw.pingPh')}
           />
           <button className="btn btn-sm btn-primary" onClick={runPing} disabled={pinging}>
-            {pinging ? 'جارٍ الاختبار…' : 'اختبر'}
+            {pinging ? t('nw.pinging') : t('nw.ping')}
           </button>
           {pingResult && (
             <span className={`badge ${pingResult.success ? 'badge-safe' : 'badge-danger'}`}>
               {pingResult.success
-                ? `متوسط الاستجابة ${pingResult.averageMs} مللي ثانية`
+                ? t('nw.pingAvg', { ms: fmtNum(pingResult.averageMs) })
                 : pingResult.message}
             </span>
           )}
@@ -88,15 +90,15 @@ export function Network(): JSX.Element {
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>محوّلات الشبكة</h3>
+        <h3 style={{ marginTop: 0 }}>{t('nw.adapters')}</h3>
         <table>
           <thead>
             <tr>
-              <th>المحوّل</th>
-              <th>عنوان IP</th>
-              <th>الحالة</th>
-              <th>السرعة</th>
-              <th>مُنزَّل / مُرسَل</th>
+              <th>{t('nw.thAdapter')}</th>
+              <th>{t('nw.thIp')}</th>
+              <th>{t('common.status')}</th>
+              <th>{t('nw.thSpeed')}</th>
+              <th>{t('nw.thTraffic')}</th>
             </tr>
           </thead>
           <tbody>
@@ -111,7 +113,7 @@ export function Network(): JSX.Element {
                 <td style={{ direction: 'ltr', textAlign: 'right' }}>{a.ip4 || '—'}</td>
                 <td>
                   <span className={`badge ${a.isUp ? 'badge-safe' : 'badge-caution'}`}>
-                    {a.isUp ? 'متصل' : 'غير متصل'}
+                    {t(a.isUp ? 'nw.up' : 'nw.down')}
                   </span>
                 </td>
                 <td className="muted">{a.speedMbps ? `${a.speedMbps} Mbps` : '—'}</td>
@@ -125,15 +127,15 @@ export function Network(): JSX.Element {
       </div>
 
       <div className="card card-pad">
-        <h3 style={{ marginTop: 0 }}>الاتصالات النشطة</h3>
+        <h3 style={{ marginTop: 0 }}>{t('nw.connections')}</h3>
         <table>
           <thead>
             <tr>
-              <th>البرنامج</th>
-              <th>البروتوكول</th>
-              <th>محلي</th>
-              <th>بعيد</th>
-              <th>الحالة</th>
+              <th>{t('nw.thApp')}</th>
+              <th>{t('nw.thProto')}</th>
+              <th>{t('nw.thLocal')}</th>
+              <th>{t('nw.thRemote')}</th>
+              <th>{t('common.status')}</th>
             </tr>
           </thead>
           <tbody>

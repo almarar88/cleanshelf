@@ -4,6 +4,7 @@ import type { CleanHistoryEntry } from '../../shared/types'
 import { formatBytes, formatDate } from '../lib/format'
 import { categoryTitleById } from '../lib/labels'
 import { useToast } from '../lib/toastContext'
+import { getLang, t } from '../lib/i18n'
 
 export function History(): JSX.Element {
   const { showToast } = useToast()
@@ -26,10 +27,10 @@ export function History(): JSX.Element {
   const totalFreed = entries.reduce((sum, e) => sum + e.freedBytes, 0)
 
   async function clear(): Promise<void> {
-    const confirmed = await window.api.dialogs.confirm('مسح سجل التنظيف بالكامل؟')
+    const confirmed = await window.api.dialogs.confirm(t('hi.clearConfirm'))
     if (!confirmed) return
     await window.api.history.clear()
-    showToast('مُسح السجل')
+    showToast(t('hi.cleared'))
     load()
   }
 
@@ -37,15 +38,15 @@ export function History(): JSX.Element {
     <div className="page">
       <div className="grid grid-3" style={{ marginBottom: 20 }}>
         <div className="card card-pad stat-tile">
-          <span className="label">إجمالي ما حُرِّر</span>
+          <span className="label">{t('hi.totalFreed')}</span>
           <span className="value">{formatBytes(totalFreed)}</span>
         </div>
         <div className="card card-pad stat-tile">
-          <span className="label">عدد عمليات التنظيف</span>
+          <span className="label">{t('hi.ops')}</span>
           <span className="value">{entries.length}</span>
         </div>
         <div className="card card-pad stat-tile">
-          <span className="label">آخر تنظيف</span>
+          <span className="label">{t('hi.lastClean')}</span>
           <span className="value" style={{ fontSize: 16 }}>
             {entries[0] ? formatDate(entries[0].timestamp) : '—'}
           </span>
@@ -53,26 +54,26 @@ export function History(): JSX.Element {
       </div>
 
       <div className="toolbar">
-        <span className="muted">{loading ? 'جارٍ التحميل…' : 'سجل عمليات التنظيف السابقة'}</span>
+        <span className="muted">{loading ? t('common.loading') : t('hi.sub')}</span>
         <div className="spacer" />
         <button className="btn btn-sm" onClick={clear} disabled={entries.length === 0}>
-          مسح السجل
+          {t('hi.clear')}
         </button>
       </div>
 
       {entries.length === 0 ? (
         <div className="empty-state">
           <div className="tile-icon tone-green"><Icon name="history" size={26} /></div>
-          <div>لم تُنفَّذ أي عملية تنظيف بعد</div>
+          <div>{t('hi.none')}</div>
         </div>
       ) : (
         <div className="card">
           <table>
             <thead>
               <tr>
-                <th>التاريخ</th>
-                <th>المساحة المحرَّرة</th>
-                <th>الفئات</th>
+                <th>{t('common.date')}</th>
+                <th>{t('hi.thFreed')}</th>
+                <th>{t('hi.thCats')}</th>
               </tr>
             </thead>
             <tbody>
@@ -81,7 +82,7 @@ export function History(): JSX.Element {
                   <td>{formatDate(e.timestamp)}</td>
                   <td style={{ fontWeight: 600 }}>{formatBytes(e.freedBytes)}</td>
                   <td className="muted" style={{ fontSize: 12.5 }}>
-                    {e.categories.map(categoryTitleById).join('، ')}
+                    {e.categories.map(categoryTitleById).join(getLang() === 'ar' ? '، ' : ', ')}
                   </td>
                 </tr>
               ))}

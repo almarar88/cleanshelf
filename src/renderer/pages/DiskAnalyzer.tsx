@@ -4,6 +4,7 @@ import type { DiskUsageResult, ScanProgress, FolderUsage } from '../../shared/ty
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
 import { ScanProgressPanel } from '../components/ScanProgressPanel'
+import { t } from '../lib/i18n'
 
 export function DiskAnalyzer(): JSX.Element {
   const { showToast } = useToast()
@@ -20,7 +21,7 @@ export function DiskAnalyzer(): JSX.Element {
       setResult(await window.api.fm.analyzeFolder(rootPath))
     } catch (err) {
       const message = (err as Error).message
-      showToast(message.includes('أُلغي') ? 'أُوقف التحليل' : 'فشل التحليل: ' + message)
+      showToast(/أُلغي|cancel/i.test(message) ? t('da.stopped') : t('da.failed', { msg: message }))
     } finally {
       setScanning(false)
       setProgress(null)
@@ -39,12 +40,12 @@ export function DiskAnalyzer(): JSX.Element {
 
   async function trashItem(item: FolderUsage): Promise<void> {
     const confirmed = await window.api.dialogs.confirm(
-      `نقل "${item.name}" إلى سلة المحذوفات؟`,
-      `${item.path}\nالحجم: ${formatBytes(item.sizeBytes)}`
+      t('da.trashConfirm', { name: item.name }),
+      t('da.trashDetail', { path: item.path, size: formatBytes(item.sizeBytes) })
     )
     if (!confirmed) return
     const [res] = await window.api.fm.trashPaths([item.path])
-    showToast(res.success ? 'تم النقل إلى سلة المحذوفات' : 'فشل الحذف: ' + res.error)
+    showToast(res.success ? t('da.moved') : t('da.deleteFailed', { msg: res.error ?? '' }))
     if (res.success && result) await analyze(result.root)
   }
 
@@ -54,7 +55,7 @@ export function DiskAnalyzer(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickAndAnalyze} disabled={scanning}>
-          <Icon name="folderOpen" size={15} /> اختر مجلدًا أو قرصًا
+          <Icon name="folderOpen" size={15} /> {t('da.pick')}
         </button>
         {result && (
           <>
@@ -63,7 +64,7 @@ export function DiskAnalyzer(): JSX.Element {
               disabled={!result.parent || scanning}
               onClick={() => result.parent && analyze(result.parent)}
             >
-              <Icon name="arrowUp" size={15} /> للأعلى
+              <Icon name="arrowUp" size={15} /> {t('da.up')}
             </button>
             <span className="muted" style={{ direction: 'ltr' }}>
               {result.root}
@@ -71,7 +72,7 @@ export function DiskAnalyzer(): JSX.Element {
           </>
         )}
         <div className="spacer" />
-        {result && <strong>الإجمالي: {formatBytes(result.totalBytes)}</strong>}
+        {result && <strong>{t('da.total', { size: formatBytes(result.totalBytes) })}</strong>}
       </div>
 
       {scanning ? (
@@ -79,19 +80,19 @@ export function DiskAnalyzer(): JSX.Element {
       ) : !result ? (
         <div className="empty-state">
           <div className="tile-icon tone-cyan"><Icon name="activity" size={26} /></div>
-          <div>اختر مجلدًا لترى أين تذهب مساحة القرص بالضبط</div>
+          <div>{t('da.empty')}</div>
         </div>
       ) : result.children.length === 0 ? (
-        <div className="empty-state">المجلد فارغ</div>
+        <div className="empty-state">{t('da.emptyFolder')}</div>
       ) : (
         <div className="card">
           <table>
             <thead>
               <tr>
-                <th style={{ width: '40%' }}>العنصر</th>
-                <th style={{ width: '30%' }}>النسبة</th>
-                <th>الحجم</th>
-                <th>الملفات</th>
+                <th style={{ width: '40%' }}>{t('da.thItem')}</th>
+                <th style={{ width: '30%' }}>{t('da.thShare')}</th>
+                <th>{t('common.size')}</th>
+                <th>{t('da.thFiles')}</th>
                 <th />
               </tr>
             </thead>
@@ -121,14 +122,14 @@ export function DiskAnalyzer(): JSX.Element {
                     <td className="muted">{item.fileCount.toLocaleString('ar')}</td>
                     <td>
                       <button className="btn btn-sm" onClick={() => openItem(item)}>
-                        {item.isDirectory ? 'افتح' : 'إظهار'}
+                        {t(item.isDirectory ? 'da.openIt' : 'lf.reveal')}
                       </button>
                       <button
                         className="btn btn-sm btn-danger"
                         style={{ marginRight: 6 }}
                         onClick={() => trashItem(item)}
                       >
-                        حذف
+                        {t('common.delete')}
                       </button>
                     </td>
                   </tr>

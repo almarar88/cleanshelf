@@ -4,6 +4,8 @@ import type { BrokenShortcut, ScanProgress } from '../../shared/types'
 import { useToast } from '../lib/toastContext'
 import { ScanProgressPanel } from '../components/ScanProgressPanel'
 import { basename } from '../lib/pathUtils'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 type Mode = 'empty' | 'shortcuts'
 
@@ -36,15 +38,15 @@ export function CleanupExtras(): JSX.Element {
       if (which === 'empty') {
         const result = await window.api.fm.findEmptyFolders(root)
         setEmptyFolders(result)
-        if (result.length === 0) showToast('لا توجد مجلدات فارغة')
+        if (result.length === 0) showToast(t('ex.noEmpty'))
       } else {
         const result = await window.api.fm.findBrokenShortcuts(root)
         setBroken(result)
-        if (result.length === 0) showToast('لا توجد اختصارات معطوبة')
+        if (result.length === 0) showToast(t('ex.noBroken'))
       }
     } catch (err) {
       const message = (err as Error).message
-      showToast(message.includes('أُلغي') ? 'أُوقف الفحص' : 'فشل الفحص: ' + message)
+      showToast(/أُلغي|cancel/i.test(message) ? t('du.stopped') : t('ex.scanFailed', { msg: message }))
     } finally {
       setScanning(false)
       setProgress(null)
@@ -65,12 +67,12 @@ export function CleanupExtras(): JSX.Element {
   async function deleteChecked(): Promise<void> {
     if (checked.size === 0) return
     const confirmed = await window.api.dialogs.confirm(
-      `نقل ${checked.size} عنصر إلى سلة المحذوفات؟`,
-      'يمكنك استرجاعها من سلة المحذوفات إن غيّرت رأيك.'
+      t('ex.trashConfirm', { n: fmtNum(checked.size) }),
+      t('ex.trashDetail')
     )
     if (!confirmed) return
     const results = await window.api.fm.trashPaths([...checked])
-    showToast(`تم حذف ${results.filter((r) => r.success).length} عنصر`)
+    showToast(t('ex.deleted', { n: fmtNum(results.filter((r) => r.success).length) }))
     if (folder) await runScan(folder, mode)
   }
 
@@ -88,11 +90,11 @@ export function CleanupExtras(): JSX.Element {
             if (folder) runScan(folder, next)
           }}
         >
-          <option value="empty">المجلدات الفارغة</option>
-          <option value="shortcuts">الاختصارات المعطوبة</option>
+          <option value="empty">{t('ex.modeEmpty')}</option>
+          <option value="shortcuts">{t('ex.modeShortcuts')}</option>
         </select>
         <button className="btn btn-primary" onClick={pickAndScan} disabled={scanning}>
-          <Icon name="folderOpen" size={15} /> اختر مجلدًا وافحص
+          <Icon name="folderOpen" size={15} /> {t('ex.pick')}
         </button>
         {folder && (
           <span className="muted" style={{ direction: 'ltr' }}>
@@ -106,10 +108,10 @@ export function CleanupExtras(): JSX.Element {
               className="btn btn-sm"
               onClick={() => setChecked(new Set(checked.size === items.length ? [] : items))}
             >
-              {checked.size === items.length ? 'إلغاء التحديد' : 'تحديد الكل'}
+              {t(checked.size === items.length ? 'common.clearAll' : 'common.selectAll')}
             </button>
             <button className="btn btn-danger" disabled={checked.size === 0} onClick={deleteChecked}>
-              حذف المحدَّد ({checked.size})
+              {t('ex.deleteSel', { n: fmtNum(checked.size) })}
             </button>
           </>
         )}
@@ -122,8 +124,8 @@ export function CleanupExtras(): JSX.Element {
           <div className="tile-icon tone-amber"><Icon name={mode === 'empty' ? 'folder' : 'link'} size={26} /></div>
           <div>
             {mode === 'empty'
-              ? 'اختر مجلدًا للبحث عن المجلدات الفارغة تمامًا'
-              : 'اختر مجلدًا للبحث عن اختصارات اختفى هدفها'}
+              ? t('ex.emptyHint')
+              : t('ex.shortcutsHint')}
           </div>
         </div>
       ) : (
@@ -132,8 +134,8 @@ export function CleanupExtras(): JSX.Element {
             <thead>
               <tr>
                 <th style={{ width: 36 }} />
-                <th>{mode === 'empty' ? 'المجلد' : 'الاختصار'}</th>
-                {mode === 'shortcuts' && <th>الهدف المفقود</th>}
+                <th>{t(mode === 'empty' ? 'ex.thFolder' : 'ex.thShortcut')}</th>
+                {mode === 'shortcuts' && <th>{t('ex.thTarget')}</th>}
               </tr>
             </thead>
             <tbody>

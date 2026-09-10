@@ -5,6 +5,8 @@ import { ScanProgressPanel } from '../components/ScanProgressPanel'
 import { formatBytes } from '../lib/format'
 import { basename } from '../lib/pathUtils'
 import { useToast } from '../lib/toastContext'
+import { fmtNum } from '../lib/format'
+import { t } from '../lib/i18n'
 
 export function Duplicates(): JSX.Element {
   const { showToast } = useToast()
@@ -24,10 +26,10 @@ export function Duplicates(): JSX.Element {
     try {
       const result = await window.api.fm.findDuplicates(root, 4096)
       setGroups(result)
-      if (announceEmpty && result.length === 0) showToast('لم يُعثر على ملفات مكرّرة')
+      if (announceEmpty && result.length === 0) showToast(t('du.none'))
     } catch (err) {
       const message = (err as Error).message
-      showToast(message.includes('أُلغي') ? 'أُوقف الفحص' : 'فشل البحث: ' + message)
+      showToast(/أُلغي|cancel/i.test(message) ? t('du.stopped') : t('du.failed', { msg: message }))
     } finally {
       setScanning(false)
       setProgress(null)
@@ -67,12 +69,12 @@ export function Duplicates(): JSX.Element {
   async function deleteChecked(): Promise<void> {
     if (checked.size === 0) return
     const confirmed = await window.api.dialogs.confirm(
-      `نقل ${checked.size} ملف إلى سلة المحذوفات؟`,
-      'سيتم الإبقاء على نسخة واحدة من كل مجموعة تكرار على الأقل إن لم تختر غير ذلك.'
+      t('du.trashConfirm', { n: fmtNum(checked.size) }),
+      t('du.trashDetail')
     )
     if (!confirmed) return
     const results = await window.api.fm.delete([...checked])
-    showToast(`تم حذف ${results.filter((r) => r.success).length} ملف`)
+    showToast(t('du.deleted', { n: fmtNum(results.filter((r) => r.success).length) }))
     if (folder) await runScan(folder, false)
   }
 
@@ -80,18 +82,18 @@ export function Duplicates(): JSX.Element {
     <div className="page">
       <div className="toolbar">
         <button className="btn btn-primary" onClick={pickAndScan} disabled={scanning}>
-          <Icon name="folderOpen" size={15} /> اختر مجلدًا وابحث عن التكرارات
+          <Icon name="folderOpen" size={15} /> {t('du.pick')}
         </button>
         {folder && <span className="muted">{folder}</span>}
         <div className="spacer" />
         {groups.length > 0 && (
           <>
-            <span className="muted">هدر تقديري: {formatBytes(wastedBytes)}</span>
+            <span className="muted">{t('du.wasted', { size: formatBytes(wastedBytes) })}</span>
             <button className="btn" onClick={selectAllButFirst}>
-              تحديد الكل عدا الأولى بكل مجموعة
+              {t('du.selectExtra')}
             </button>
             <button className="btn btn-danger" disabled={checked.size === 0} onClick={deleteChecked}>
-              حذف المحدَّد ({checked.size})
+              {t('du.deleteSel', { n: fmtNum(checked.size) })}
             </button>
           </>
         )}
@@ -102,14 +104,14 @@ export function Duplicates(): JSX.Element {
       ) : groups.length === 0 ? (
         <div className="empty-state">
           <div className="tile-icon tone-pink"><Icon name="copy" size={26} /></div>
-          <div>اختر مجلدًا لبدء البحث عن الملفات المكرّرة</div>
+          <div>{t('du.empty')}</div>
         </div>
       ) : (
         <div className="grid" style={{ gap: 12 }}>
           {groups.map((g) => (
             <div key={g.hash} className="card card-pad">
               <div className="muted" style={{ marginBottom: 8, fontSize: 12.5 }}>
-                {g.files.length} نسخ × {formatBytes(g.sizeBytes)}
+                {t('du.copies', { n: fmtNum(g.files.length), size: formatBytes(g.sizeBytes) })}
               </div>
               {g.files.map((f) => (
                 <div key={f} className="checkbox-row" style={{ marginBottom: 4 }}>
