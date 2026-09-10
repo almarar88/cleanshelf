@@ -181,8 +181,17 @@ jobs:
           ls -la release-files
           FILES=$(find release-files -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.apk' \))
           if [ -z "$FILES" ]; then echo "لا توجد ملفات للنشر"; exit 1; fi
-          gh release create "$TAG" $FILES \
-            --target "$GITHUB_SHA" \
-            --title "CleanShelf $TAG" \
-            --notes-file .github/release-notes.md
-          echo "تم نشر الإصدار $TAG"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # إعادة تشغيل على وسم منشور: نحدّث العنوان والملاحظات ونستبدل الملفات
+            gh release edit "$TAG" \
+              --title "CleanShelf $TAG" \
+              --notes-file .github/release-notes.md
+            gh release upload "$TAG" $FILES --clobber
+            echo "تم تحديث الإصدار $TAG"
+          else
+            gh release create "$TAG" $FILES \
+              --target "$GITHUB_SHA" \
+              --title "CleanShelf $TAG" \
+              --notes-file .github/release-notes.md
+            echo "تم نشر الإصدار $TAG"
+          fi
