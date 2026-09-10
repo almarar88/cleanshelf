@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
 
 const CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; connect-src 'self'"
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self' data:; connect-src 'self'"
 
 /**
  * يحقن سياسة CSP صارمة في النسخة المبنية فقط. في وضع التطوير يحتاج

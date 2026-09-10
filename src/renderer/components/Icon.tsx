@@ -72,7 +72,25 @@ const PATHS: Record<string, string> = {
   type: 'M4 7V4h16v3M9 20h6M12 4v16',
   server: 'M4 3h16a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM4 14h16a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM7 6h.01M7 17h.01',
   heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z',
-  logo: 'M4 5h16v4H4zM6 9v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9M9 13h6M12 3v2'
+  logo: 'M4 5h16v4H4zM6 9v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9M9 13h6M12 3v2',
+
+  // أيقونات التصميم الجديد
+  star: 'M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6-4.4-4.3 6.1-.9z',
+  starFill: 'M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6-4.4-4.3 6.1-.9z',
+  sliders: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+  arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  trendUp: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  hourglass: 'M7 3h10M7 21h10M8 3v3.5c0 2 4 3.7 4 5.5s-4 3.5-4 5.5V21M16 3v3.5c0 2-4 3.7-4 5.5s4 3.5 4 5.5V21',
+  calendar2: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
+  gauge: 'M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18zM12 12l4-4M12 12h.01',
+  dots: 'M5 12h.01M12 12h.01M19 12h.01',
+  house: 'M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z',
+  bolt: 'M13 2L4 14h7l-1 8 9-12h-7z',
+  message: 'M21 12a8 8 0 0 1-8 8H8l-5 3 1.5-4.5A8 8 0 1 1 21 12zM8 12h.01M12 12h.01M16 12h.01',
+  widget: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  bellDot: 'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zM13.7 21a2 2 0 0 1-3.4 0',
+  camera: 'M4 7h3l2-3h6l2 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'
 }
 
 export type IconName = keyof typeof PATHS
@@ -81,12 +99,14 @@ export function Icon({
   name,
   size = 18,
   strokeWidth = 1.8,
-  className
+  className,
+  style
 }: {
   name: IconName
   size?: number
   strokeWidth?: number
   className?: string
+  style?: React.CSSProperties
 }): JSX.Element {
   return (
     <svg
@@ -99,6 +119,7 @@ export function Icon({
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      style={style}
       aria-hidden="true"
     >
       <path d={PATHS[name]} />

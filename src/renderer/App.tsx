@@ -24,65 +24,30 @@ import { Shredder } from './pages/Shredder'
 import { OldDownloads } from './pages/OldDownloads'
 import { Report } from './pages/Report'
 import { Settings } from './pages/Settings'
+import { Overview } from './pages/Overview'
+import { Plan } from './pages/Plan'
+import { PAGE_META, type PageId as Page } from './lib/pages'
+import { loadPinned, togglePinned } from './lib/pinned'
 import { ToastProvider, useToast } from './lib/toastContext'
 import { applyAccent, applyTheme, loadAccent, loadTheme, nextTheme, THEME_ICON, THEME_LABEL, type ThemeMode } from './lib/theme'
 
-export type PageId =
-  | 'dashboard'
-  | 'cleaner'
-  | 'uninstaller'
-  | 'files'
-  | 'tags'
-  | 'duplicates'
-  | 'largefiles'
-  | 'startup'
-  | 'system'
-  | 'processes'
-  | 'services'
-  | 'network'
-  | 'diskanalyzer'
-  | 'extras'
-  | 'history'
-  | 'mactools'
-  | 'privacy'
-  | 'shredder'
-  | 'downloads'
-  | 'report'
-  | 'settings'
+export type { PageId } from './lib/pages'
 
-const PAGE_TITLES: Record<PageId, { title: string; sub: string }> = {
-  dashboard: { title: 'الرئيسية', sub: 'نظرة عامة على صحة جهازك وتنظيف بضغطة واحدة' },
-  cleaner: { title: 'منظّف القرص', sub: 'حرّر المساحة بحذف الملفات غير الضرورية' },
-  uninstaller: { title: 'إزالة البرامج', sub: 'أزل البرامج المثبَّتة مع مخلّفاتها' },
-  files: { title: 'مدير الملفات', sub: 'تصفّح وأعد تسمية ونظّم ملفاتك' },
-  tags: { title: 'محرر وسوم الأغاني', sub: 'حرّر معلومات وأغلفة ملفات MP3 كما في Mp3tag' },
-  duplicates: { title: 'الملفات المكرّرة', sub: 'اعثر على النسخ المكرّرة واسترجع المساحة' },
-  largefiles: { title: 'أكبر الملفات', sub: 'حدّد أكبر الملفات المستهلكة للمساحة' },
-  startup: { title: 'برامج بدء التشغيل', sub: 'تحكّم بما يعمل تلقائيًا عند إقلاع الجهاز' },
-  system: { title: 'معلومات النظام', sub: 'حالة المعالج والذاكرة والأقراص' },
-  processes: { title: 'العمليات', sub: 'ما يعمل الآن على جهازك، وإنهاء ما تريد' },
-  services: { title: 'خدمات النظام', sub: 'تشغيل وإيقاف خدمات النظام وlaunchd' },
-  network: { title: 'الشبكة', sub: 'المحوّلات والاتصالات النشطة وأدوات التشخيص' },
-  diskanalyzer: { title: 'محلّل المساحة', sub: 'اعرف أين تذهب مساحة قرصك بالضبط' },
-  extras: { title: 'مجلدات واختصارات', sub: 'المجلدات الفارغة والاختصارات المعطوبة' },
-  history: { title: 'سجل التنظيف', sub: 'ما نُظّف سابقًا وكم مساحة تحرّرت' },
-  mactools: { title: 'أدوات ماك', sub: 'مخلّفات التطبيقات المحذوفة وملفات اللغات' },
-  privacy: { title: 'خصوصية المتصفح', sub: 'امسح سجل التصفح والكوكيز والجلسات من كل المتصفحات' },
-  shredder: { title: 'الممزّق الآمن', sub: 'احذف الملفات الحساسة بحيث يستحيل استرجاعها' },
-  downloads: { title: 'التنزيلات القديمة', sub: 'ما نسيته في مجلد التنزيلات منذ شهور' },
-  report: { title: 'تقرير النظام', sub: 'لقطة كاملة عن جهازك قابلة للحفظ والمشاركة' },
-  settings: { title: 'الإعدادات', sub: 'المظهر والسلوك وخيارات الأدوات' }
-}
 
 function AppInner(): JSX.Element {
   const { showToast } = useToast()
-  const [page, setPage] = useState<PageId>('dashboard')
+  const [page, setPage] = useState<Page>('dashboard')
   const [theme, setTheme] = useState<ThemeMode>(loadTheme)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [command, setCommand] = useState<string | null>(null)
   const [isMac, setIsMac] = useState(false)
-  const meta = PAGE_TITLES[page]
+  const [pinned, setPinned] = useState<Page[]>(loadPinned)
+  const meta = PAGE_META[page]
+
+  const onTogglePin = useCallback((id: Page) => {
+    setPinned((prev) => togglePinned(prev, id))
+  }, [])
 
   // الإعدادات المحفوظة هي المرجع؛ التخزين المحلي مجرد قيمة أولية تمنع وميض السمة
   useEffect(() => {
@@ -161,7 +126,7 @@ function AppInner(): JSX.Element {
       group: 'الصفحات',
       icon: n.icon,
       keywords: n.keywords,
-      hint: PAGE_TITLES[n.id].sub,
+      hint: PAGE_META[n.id].sub,
       action: () => setPage(n.id)
     }))
     const actions: PaletteItem[] = [
@@ -205,7 +170,20 @@ function AppInner(): JSX.Element {
   function renderPage(): JSX.Element {
     switch (page) {
       case 'dashboard':
-        return <Dashboard onNavigate={setPage} settings={settings} command={command} onCommandHandled={onCommandHandled} />
+        return (
+          <Dashboard
+            onNavigate={setPage}
+            settings={settings}
+            command={command}
+            onCommandHandled={onCommandHandled}
+            pinned={pinned}
+            onTogglePin={onTogglePin}
+          />
+        )
+      case 'overview':
+        return <Overview onNavigate={setPage} />
+      case 'plan':
+        return <Plan onNavigate={setPage} isMac={isMac} />
       case 'cleaner':
         return <Cleaner />
       case 'uninstaller':
@@ -251,7 +229,7 @@ function AppInner(): JSX.Element {
 
   return (
     <div className="app-shell">
-      <Sidebar active={page} onNavigate={setPage} />
+      <Sidebar active={page} onNavigate={setPage} pinned={pinned} onTogglePin={onTogglePin} />
       <div className="main-area">
         <div className="topbar">
           <div>
