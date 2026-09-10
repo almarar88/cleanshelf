@@ -3,6 +3,8 @@ import { Native } from './native'
 import type { AppSettings, PermissionState } from './types'
 import { loadSettings, saveSettings } from './settings'
 import { applyAccent, applyTheme } from './theme'
+import { useI18n } from './i18n'
+import { loadFavorites, saveFavorites } from './favorites'
 import type { PageId, TabId } from './nav'
 
 interface AppContextValue {
@@ -14,23 +16,27 @@ interface AppContextValue {
   back: () => boolean
   tab: TabId
   stack: PageId[]
+  favorites: PageId[]
+  toggleFavorite: (page: PageId) => void
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
-
 const TAB_IDS: TabId[] = ['home', 'cleaner', 'files', 'apps', 'more']
 
 export function AppProvider({ children }: { children: React.ReactNode }): JSX.Element {
-  const [settings, setSettings] = useState<AppSettings>(loadSettings)
+  const { lang, setLang } = useI18n()
+  const [settings, setSettings] = useState<AppSettings>(() => ({ ...loadSettings(), lang }))
   const [permissions, setPermissions] = useState<PermissionState>({ allFiles: false, usageStats: false, notifications: false })
   const [tab, setTab] = useState<TabId>('home')
   const [stack, setStack] = useState<PageId[]>([])
+  const [favorites, setFavorites] = useState<PageId[]>(loadFavorites)
 
   useEffect(() => {
     applyTheme(settings.theme)
     applyAccent(settings.accentHue)
     saveSettings(settings)
-  }, [settings])
+    if (settings.lang !== lang) setLang(settings.lang)
+  }, [settings, lang, setLang])
 
   const refreshPermissions = useCallback(async () => {
     try {
@@ -42,7 +48,6 @@ export function AppProvider({ children }: { children: React.ReactNode }): JSX.El
 
   useEffect(() => {
     refreshPermissions()
-    // عند العودة من شاشة الإعدادات نعيد فحص الصلاحيات
     const onVisible = (): void => {
       if (document.visibilityState === 'visible') refreshPermissions()
     }
@@ -74,9 +79,17 @@ export function AppProvider({ children }: { children: React.ReactNode }): JSX.El
     return handled
   }, [])
 
+  const toggleFavorite = useCallback((page: PageId) => {
+    setFavorites((prev) => {
+      const next = prev.includes(page) ? prev.filter((p) => p !== page) : [...prev, page].slice(-6)
+      saveFavorites(next)
+      return next
+    })
+  }, [])
+
   const value = useMemo(
-    () => ({ settings, updateSettings, permissions, refreshPermissions, navigate, back, tab, stack }),
-    [settings, updateSettings, permissions, refreshPermissions, navigate, back, tab, stack]
+    () => ({ settings, updateSettings, permissions, refreshPermissions, navigate, back, tab, stack, favorites, toggleFavorite }),
+    [settings, updateSettings, permissions, refreshPermissions, navigate, back, tab, stack, favorites, toggleFavorite]
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

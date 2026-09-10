@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Icon } from './Icon'
 import { useCountUp } from './CountUp'
 import { formatBytes } from '../lib/format'
+import { t } from '../lib/i18n'
 
-const COLORS = ['#2f7bf6', '#34c76f', '#f97316', '#ec4899', '#8b5cf6', '#06b6d4', '#facc15']
+const COLORS = ['#f5e14c', '#fc8b4f', '#121212', '#c8ec71', '#8fd7f5', '#f8b4d0']
 
 /** شاشة التنظيف: حلقات دوّارة أثناء العمل، ثم عدّاد للمساحة المحرَّرة وقصاصات احتفال. */
 export function CleanOverlay({ phase, freedBytes, label, onClose }: { phase: 'working' | 'done'; freedBytes: number; label: string; onClose: () => void }): JSX.Element {
@@ -23,8 +24,8 @@ export function CleanOverlay({ phase, freedBytes, label, onClose }: { phase: 'wo
 
   useEffect(() => {
     if (phase !== 'done') return
-    const t = setTimeout(() => setClosing(true), 3200)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setClosing(true), 3200)
+    return () => clearTimeout(timer)
   }, [phase])
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function CleanOverlay({ phase, freedBytes, label, onClose }: { phase: 'wo
           ))}
         </div>
       )}
-      <div className={`clean-orb ${phase === 'done' ? 'done' : ''}`}>
+      <div className={`orb ${phase === 'done' ? 'done' : ''}`}>
         <div className="ring" />
         <div className="ring r2" />
         <div className="ring r3" />
@@ -49,13 +50,13 @@ export function CleanOverlay({ phase, freedBytes, label, onClose }: { phase: 'wo
       {phase === 'working' ? (
         <>
           <h2>{label}</h2>
-          <div className="muted">لا تغلق التطبيق — ثوانٍ قليلة</div>
+          <div className="muted">{t('clean.dontClose')}</div>
         </>
       ) : (
         <>
-          <div className="big" style={{ color: 'var(--success)' }}>{formatBytes(shown)}</div>
-          <h2>تم تحرير المساحة</h2>
-          <div className="muted">اضغط في أي مكان للمتابعة</div>
+          <div className="big">{formatBytes(shown)}</div>
+          <h2>{t('clean.freedTitle')}</h2>
+          <div className="muted">{t('clean.tapToContinue')}</div>
         </>
       )}
     </div>

@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { Native } from '../lib/native'
 import { useApp } from '../lib/appContext'
 import { useToast } from '../lib/toastContext'
-import { formatBytes, formatDate } from '../lib/format'
+import { getLang, t } from '../lib/i18n'
+import { fmtNum, formatBytes, formatDate } from '../lib/format'
+import { tap } from '../lib/haptics'
 import type { DirListing, FileEntry, StorageRoot } from '../lib/types'
 import { Icon } from '../components/Icon'
-import { Check, ConfirmSheet, InputSheet, Sheet, fileIcon } from '../components/ui'
+import { Check, ConfirmSheet, EmptyState, Ico, InputSheet, Sheet, fileIcon } from '../components/ui'
 import { FolderPicker } from '../components/FolderPicker'
 import { PermissionGate } from '../components/PermissionGate'
 
 type SortKey = 'name' | 'size' | 'date'
+const ROOT = '/storage/emulated/0'
 
 function applyPattern(pattern: string, name: string, index: number): string {
   const dot = name.lastIndexOf('.')
@@ -49,7 +52,7 @@ export function Files(): JSX.Element {
     try {
       setListing(await Native.listDir({ path }))
     } catch (err) {
-      showToast('تعذّر فتح المجلد: ' + (err as Error).message)
+      showToast(t('toast.scanFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -57,11 +60,12 @@ export function Files(): JSX.Element {
 
   const entries = useMemo(() => {
     const list = [...(searchResults ?? listing?.entries ?? [])]
+    const collator = new Intl.Collator(getLang() === 'ar' ? 'ar' : 'en')
     list.sort((a, b) => {
       if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
       if (sort === 'size') return b.sizeBytes - a.sizeBytes
       if (sort === 'date') return b.modifiedAt - a.modifiedAt
-      return a.name.localeCompare(b.name, 'ar')
+      return collator.compare(a.name, b.name)
     })
     return list
   }, [listing, searchResults, sort])
@@ -69,6 +73,7 @@ export function Files(): JSX.Element {
   const selectedEntries = entries.filter((e) => selected.has(e.path))
 
   function toggle(path: string): void {
+    tap()
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(path)) next.delete(path)
@@ -77,11 +82,12 @@ export function Files(): JSX.Element {
     })
   }
 
-  function tap(entry: FileEntry): void {
+  function openEntry(entry: FileEntry): void {
     if (selected.size > 0) {
       toggle(entry.path)
       return
     }
+    tap()
     if (entry.isDirectory) open(entry.path)
     else {
       setInfoEntry(entry)
@@ -95,7 +101,7 @@ export function Files(): JSX.Element {
     try {
       const r = await Native.search({ root: listing.path, query: query.trim() })
       setSearchResults(r.entries)
-      if (r.entries.length === 0) showToast('لا نتائج')
+      if (r.entries.length === 0) showToast(t('more.noResults'))
     } finally {
       setLoading(false)
     }
@@ -104,13 +110,13 @@ export function Files(): JSX.Element {
   async function doRename(name: string): Promise<void> {
     setSheet('none')
     const target = selectedEntries[0] ?? infoEntry
-    if (!target) return
+    if (!target || !listing) return
     try {
       await Native.rename({ path: target.path, newName: name })
-      showToast('تمت إعادة التسمية')
-      open(listing!.path)
-    } catch (err) {
-      showToast('فشلت إعادة التسمية: ' + (err as Error).message)
+      showToast(t('files.renamed'))
+      open(listing.path)
+    } catch {
+      showToast(t('files.renameFailed'))
     }
   }
 
@@ -121,29 +127,32 @@ export function Files(): JSX.Element {
       await Native.createFolder({ parent: listing.path, name })
       open(listing.path)
     } catch (err) {
-      showToast('فشل إنشاء المجلد: ' + (err as Error).message)
+      showToast(t('toast.scanFailed', { msg: (err as Error).message }))
     }
   }
 
   async function doMove(destination: string): Promise<void> {
     setSheet('none')
+    if (!listing) return
     const r = await Native.move({ paths: [...selected], destination })
     const failed = r.results.filter((x) => !x.success).length
-    showToast(failed ? `نُقل ${r.results.length - failed} وتعذّر ${failed}` : `تم نقل ${r.results.length} عنصر`)
-    open(listing!.path)
+    showToast(failed ? t('nav.moveFailed') : t('files.moved', { n: fmtNum(r.results.length) }))
+    open(listing.path)
   }
 
   async function doTrash(): Promise<void> {
     setSheet('none')
     const paths = selected.size > 0 ? [...selected] : infoEntry ? [infoEntry.path] : []
+    if (paths.length === 0 || !listing) return
     const r = await Native.trash({ paths })
     const failed = r.results.filter((x) => !x.success).length
-    showToast(failed ? `نُقل ${r.results.length - failed} وتعذّر ${failed}` : `تم نقل ${r.results.length} عنصر إلى سلة المهملات`)
-    open(listing!.path)
+    showToast(failed ? t('moved.partial', { ok: fmtNum(r.results.length - failed), total: fmtNum(r.results.length) }) : t('files.trashed', { n: fmtNum(r.results.length) }))
+    open(listing.path)
   }
 
   async function doBatchRename(): Promise<void> {
     setSheet('none')
+    if (!listing) return
     const files = selectedEntries.filter((e) => !e.isDirectory)
     let ok = 0
     let index = 1
@@ -158,74 +167,103 @@ export function Files(): JSX.Element {
         // نكمل الباقي
       }
     }
-    showToast(`أُعيدت تسمية ${ok} من ${files.length}`)
-    open(listing!.path)
+    showToast(t('files.batchDone', { ok: fmtNum(ok), total: fmtNum(files.length) }))
+    open(listing.path)
   }
 
-  const crumbs = listing ? listing.path.replace(/^\/storage\/emulated\/0/, '').split('/').filter(Boolean) : []
+  const crumbs = listing ? listing.path.replace(ROOT, '').split('/').filter(Boolean) : []
 
   return (
     <div className="page">
       <PermissionGate />
 
+      {!listing && <h1 className="display sm">{t('page.files')}</h1>}
+
       {listing && (
         <>
-          <div className="search-box" style={{ marginBottom: 10 }}>
-            <Icon name="search" size={16} />
-            <input type="search" placeholder="ابحث في هذا المجلد وما تحته…" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runSearch()} />
-            {searchResults && <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => { setSearchResults(null); setQuery('') }}><Icon name="x" size={15} /></button>}
+          <div className="field-row" style={{ marginBottom: 10 }}>
+            <Icon name="search" size={18} />
+            <input type="search" placeholder={t('files.searchHere')} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runSearch()} />
+            {searchResults ? (
+              <button className="round-btn plain" style={{ width: 28, height: 28 }} onClick={() => { setSearchResults(null); setQuery('') }} aria-label={t('common.clearAll')}><Icon name="x" size={16} /></button>
+            ) : (
+              query.trim() && <button className="round-btn plain" style={{ width: 28, height: 28 }} onClick={runSearch} aria-label={t('common.search')}><Icon name="arrowRight" size={16} className="flip-rtl" /></button>
+            )}
           </div>
-          <div className="breadcrumbs">
-            <span className="crumb" onClick={() => open(null)}>الأقسام</span>
-            <span className="sep">/</span>
-            <span className={`crumb ${crumbs.length === 0 ? 'current' : ''}`} onClick={() => open('/storage/emulated/0')}>الداخلية</span>
+
+          <div className="crumbs">
+            <span className="c" onClick={() => open(null)}>{t('files.sections')}</span>
+            <span className={`c ${crumbs.length === 0 ? 'cur' : ''}`} onClick={() => open(ROOT)}>{t('files.internal')}</span>
             {crumbs.map((c, i) => (
-              <span key={i} style={{ display: 'contents' }}>
-                <span className="sep">/</span>
-                <span className={`crumb ${i === crumbs.length - 1 ? 'current' : ''}`} onClick={() => open('/storage/emulated/0/' + crumbs.slice(0, i + 1).join('/'))}>{c}</span>
-              </span>
+              <span key={i} className={`c ${i === crumbs.length - 1 ? 'cur' : ''}`} onClick={() => open(`${ROOT}/${crumbs.slice(0, i + 1).join('/')}`)}>{c}</span>
             ))}
           </div>
-          <div className="toolbar">
+
+          <div className="toolbar" style={{ marginBottom: 12 }}>
             <div className="segmented" style={{ flex: 1 }}>
               {(['name', 'size', 'date'] as SortKey[]).map((k) => (
-                <button key={k} className={sort === k ? 'active' : ''} onClick={() => setSort(k)}>{k === 'name' ? 'الاسم' : k === 'size' ? 'الحجم' : 'التاريخ'}</button>
+                <button key={k} className={sort === k ? 'active' : ''} onClick={() => { tap(); setSort(k) }}>
+                  {t(k === 'name' ? 'files.sortName' : k === 'size' ? 'files.sortSize' : 'files.sortDate')}
+                </button>
               ))}
             </div>
-            <button className="icon-btn raised" onClick={() => setSheet('newFolder')} aria-label="مجلد جديد"><Icon name="plus" size={18} /></button>
-            <button className="icon-btn raised" onClick={() => setSelected(selected.size === entries.length ? new Set() : new Set(entries.map((e) => e.path)))} aria-label="تحديد الكل"><Icon name="checkCircle" size={18} /></button>
+            <button className="round-btn" onClick={() => { tap(); setSheet('newFolder') }} aria-label={t('files.newFolder')}><Icon name="plus" size={18} /></button>
+            <button className="round-btn" onClick={() => { tap(); setSelected(selected.size === entries.length ? new Set() : new Set(entries.map((e) => e.path))) }} aria-label={t('common.selectAll')}><Icon name="checkCircle" size={18} /></button>
           </div>
         </>
       )}
 
       {!listing ? (
         <div className="card">
-          {roots.map((r) => (
-            <div key={r.path} className="row" onClick={() => open(r.path)}>
-              <div className="tile-icon sm"><Icon name={r.removable ? 'download' : 'hardDrive'} size={17} /></div>
-              <div className="text">
-                <div className="title">{r.label}</div>
-                <div className="desc">{formatBytes(r.freeBytes)} متاحة من {formatBytes(r.totalBytes)}</div>
-                <div className="progress-bar" style={{ marginTop: 6, height: 5 }}><div style={{ width: `${r.totalBytes ? Math.round(((r.totalBytes - r.freeBytes) / r.totalBytes) * 100) : 0}%` }} /></div>
+          {roots.map((r) => {
+            const usedPct = r.totalBytes ? Math.round(((r.totalBytes - r.freeBytes) / r.totalBytes) * 100) : 0
+            return (
+              <div key={r.path} className="row" onClick={() => { tap(); open(r.path) }}>
+                <Ico name={r.removable ? 'download' : 'hardDrive'} tone={r.removable ? 'tone-teal' : 'tone-blue'} size="sm" />
+                <div className="text">
+                  <div className="title">{r.label}</div>
+                  <div className="desc">{t('device.freeOf', { free: formatBytes(r.freeBytes), total: formatBytes(r.totalBytes) })}</div>
+                  <div className="bar warm" style={{ marginTop: 7, height: 6 }}><div style={{ width: `${usedPct}%` }} /></div>
+                </div>
+                <Icon name="chevron" size={16} className="muted flip-rtl" />
               </div>
-            </div>
-          ))}
-          {roots.length === 0 && permissions.allFiles && <div className="empty-state">جارٍ قراءة أقسام التخزين…</div>}
+            )
+          })}
+          {roots.length === 0 && permissions.allFiles && (
+            <>
+              <div className="skeleton" style={{ height: 62 }} />
+              <div className="skeleton" style={{ height: 62, marginTop: 1 }} />
+            </>
+          )}
         </div>
       ) : loading ? (
-        <div className="card"><div className="skeleton" style={{ height: 56 }} /><div className="skeleton" style={{ height: 56, marginTop: 1 }} /></div>
+        <div className="card">
+          <div className="skeleton" style={{ height: 58 }} />
+          <div className="skeleton" style={{ height: 58, marginTop: 1 }} />
+          <div className="skeleton" style={{ height: 58, marginTop: 1 }} />
+        </div>
       ) : entries.length === 0 ? (
-        <div className="empty-state"><div className="tile-icon"><Icon name="folder" size={28} /></div><div>{searchResults ? 'لا نتائج' : 'المجلد فارغ'}</div></div>
+        <EmptyState icon="folder" tone="tone-yellow" text={searchResults ? t('more.noResults') : t('files.emptyFolder')} />
       ) : (
         <div className="card">
-          {entries.map((e) => (
-            <div key={e.path} className={`row ${selected.has(e.path) ? 'selected' : ''}`} onClick={() => tap(e)} onContextMenu={(ev) => { ev.preventDefault(); toggle(e.path) }}>
-              {selected.size > 0 ? <Check on={selected.has(e.path)} /> : <div className={`tile-icon sm ${e.isDirectory ? 'tone-amber' : ''}`}><Icon name={fileIcon(e.isDirectory, e.extension)} size={17} /></div>}
+          {entries.map((e, i) => (
+            <div
+              key={e.path}
+              className={`row ${selected.has(e.path) ? 'on' : ''}`}
+              style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}
+              onClick={() => openEntry(e)}
+              onContextMenu={(ev) => { ev.preventDefault(); toggle(e.path) }}
+            >
+              {selected.size > 0 ? <Check on={selected.has(e.path)} /> : <Ico name={fileIcon(e.isDirectory, e.extension)} tone={e.isDirectory ? 'tone-yellow' : 'tone-ink'} size="sm" />}
               <div className="text">
                 <div className="title">{e.name}</div>
-                <div className="desc">{e.isDirectory ? `${e.childCount} عنصر` : formatBytes(e.sizeBytes)} • {formatDate(e.modifiedAt)}</div>
+                <div className="desc">{e.isDirectory ? t('files.childCount', { n: fmtNum(e.childCount) }) : formatBytes(e.sizeBytes)} • {formatDate(e.modifiedAt, false)}</div>
               </div>
-              {selected.size === 0 && <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={(ev) => { ev.stopPropagation(); toggle(e.path) }} aria-label="تحديد"><Icon name="checkCircle" size={16} className="muted" /></button>}
+              {selected.size === 0 && (
+                <button className="round-btn plain" style={{ width: 30, height: 30 }} onClick={(ev) => { ev.stopPropagation(); toggle(e.path) }} aria-label={t('common.selected')}>
+                  <Icon name="checkCircle" size={17} className="muted" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -233,49 +271,60 @@ export function Files(): JSX.Element {
 
       {selected.size > 0 && (
         <div className="action-bar">
-          <button className="btn btn-sm" onClick={() => setSheet('rename')} disabled={selected.size !== 1}><Icon name="type" size={15} /> تسمية</button>
-          <button className="btn btn-sm" onClick={() => setSheet('batch')} disabled={selectedEntries.filter((e) => !e.isDirectory).length < 2}><Icon name="layers" size={15} /> دفعية</button>
-          <button className="btn btn-sm" onClick={() => setSheet('move')}><Icon name="folderOpen" size={15} /> نقل</button>
-          <button className="btn btn-sm btn-danger" onClick={() => setSheet('trash')}><Icon name="trash" size={15} /> {selected.size}</button>
+          <button className="btn btn-sm" onClick={() => setSheet('rename')} disabled={selected.size !== 1}><Icon name="type" size={16} /> {t('files.rename')}</button>
+          <button className="btn btn-sm" onClick={() => setSheet('batch')} disabled={selectedEntries.filter((e) => !e.isDirectory).length < 2}><Icon name="layers" size={16} /> {t('files.batch')}</button>
+          <button className="btn btn-sm" onClick={() => setSheet('move')}><Icon name="folderOpen" size={16} /> {t('files.move')}</button>
+          <button className="btn btn-sm btn-danger" onClick={() => setSheet('trash')}><Icon name="trash" size={16} /> {fmtNum(selected.size)}</button>
         </div>
       )}
 
-      {sheet === 'rename' && <InputSheet title="إعادة التسمية" initialValue={(selectedEntries[0] ?? infoEntry)?.name ?? ''} confirmLabel="حفظ" onConfirm={doRename} onCancel={() => setSheet('none')} />}
-      {sheet === 'newFolder' && <InputSheet title="مجلد جديد" initialValue="مجلد جديد" confirmLabel="إنشاء" onConfirm={doNewFolder} onCancel={() => setSheet('none')} />}
-      {sheet === 'move' && <FolderPicker title={`نقل ${selected.size} عنصر إلى…`} onPick={doMove} onCancel={() => setSheet('none')} />}
-      {sheet === 'trash' && <ConfirmSheet title="نقل إلى سلة المهملات" message={`سيُنقل ${selected.size || 1} عنصر إلى سلة مهملات CleanShelf، ويمكنك استرجاعه من أداة "سلة المهملات" خلال أيام الاحتفاظ.`} confirmLabel="نقل" onConfirm={doTrash} onCancel={() => setSheet('none')} />}
+      {sheet === 'rename' && <InputSheet title={t('files.rename')} initialValue={(selectedEntries[0] ?? infoEntry)?.name ?? ''} confirmLabel={t('common.save')} onConfirm={doRename} onCancel={() => setSheet('none')} />}
+      {sheet === 'newFolder' && <InputSheet title={t('files.newFolder')} initialValue={t('files.newFolder')} confirmLabel={t('common.confirm')} onConfirm={doNewFolder} onCancel={() => setSheet('none')} />}
+      {sheet === 'move' && <FolderPicker title={t('files.moveTo', { n: fmtNum(selected.size) })} onPick={doMove} onCancel={() => setSheet('none')} />}
+      {sheet === 'trash' && (
+        <ConfirmSheet
+          title={t('common.moveToTrash')}
+          message={t('files.trashConfirm', { n: fmtNum(selected.size || 1) })}
+          confirmLabel={t('common.trash')}
+          onConfirm={doTrash}
+          onCancel={() => setSheet('none')}
+        />
+      )}
       {sheet === 'batch' && (
         <Sheet onClose={() => setSheet('none')}>
-          <h3>إعادة تسمية دفعية</h3>
-          <p>المتغيّرات: <code>%name%</code> الاسم الحالي، <code>%n%</code> رقم تسلسلي، <code>%nn%</code> رقم بخانتين، <code>%ext%</code> الامتداد.</p>
+          <h3>{t('files.batch')}</h3>
+          <p>{t('files.batchHint')}</p>
           <input type="text" value={batchPattern} onChange={(e) => setBatchPattern(e.target.value)} dir="ltr" />
           <div className="card" style={{ marginTop: 12, maxHeight: '30vh', overflowY: 'auto' }}>
             {selectedEntries.filter((e) => !e.isDirectory).slice(0, 20).map((e, i) => (
-              <div key={e.path} className="row" style={{ minHeight: 44, padding: '8px 14px' }}>
-                <div className="text"><div className="desc">{e.name}</div><div className="title" style={{ fontSize: 13 }}>{applyPattern(batchPattern, e.name, i + 1)}</div></div>
+              <div key={e.path} className="row" style={{ minHeight: 44 }}>
+                <div className="text">
+                  <div className="desc">{e.name}</div>
+                  <div className="title" style={{ fontSize: 13.5 }}>{applyPattern(batchPattern, e.name, i + 1)}</div>
+                </div>
               </div>
             ))}
           </div>
           <div className="actions">
-            <button className="btn" onClick={() => setSheet('none')}>إلغاء</button>
-            <button className="btn btn-primary" onClick={doBatchRename}>تطبيق</button>
+            <button className="btn" onClick={() => setSheet('none')}>{t('common.cancel')}</button>
+            <button className="btn btn-dark" onClick={doBatchRename}>{t('files.batchApply')}</button>
           </div>
         </Sheet>
       )}
       {sheet === 'info' && infoEntry && (
         <Sheet onClose={() => setSheet('none')}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div className="tile-icon"><Icon name={fileIcon(false, infoEntry.extension)} size={22} /></div>
+            <Ico name={fileIcon(false, infoEntry.extension)} tone="tone-ink" size="lg" />
             <div style={{ minWidth: 0 }}>
               <h3 style={{ marginBottom: 2, wordBreak: 'break-all' }}>{infoEntry.name}</h3>
               <div className="muted" style={{ fontSize: 12.5 }}>{formatBytes(infoEntry.sizeBytes)} • {formatDate(infoEntry.modifiedAt)}</div>
             </div>
           </div>
-          <div className="muted mono" style={{ marginTop: 10, wordBreak: 'break-all', whiteSpace: 'normal' }}>{infoEntry.path}</div>
+          <div className="muted mono" style={{ marginTop: 10, wordBreak: 'break-all', whiteSpace: 'normal', direction: 'ltr', textAlign: 'start' }}>{infoEntry.path}</div>
           <div className="actions">
-            <button className="btn" onClick={() => { setSelected(new Set([infoEntry.path])); setSheet('rename') }}><Icon name="type" size={15} /> تسمية</button>
-            <button className="btn" onClick={() => { setSelected(new Set([infoEntry.path])); setSheet('move') }}><Icon name="folderOpen" size={15} /> نقل</button>
-            <button className="btn btn-danger" onClick={() => setSheet('trash')}><Icon name="trash" size={15} /> حذف</button>
+            <button className="btn" onClick={() => { setSelected(new Set([infoEntry.path])); setSheet('rename') }}><Icon name="type" size={16} /> {t('files.rename')}</button>
+            <button className="btn" onClick={() => { setSelected(new Set([infoEntry.path])); setSheet('move') }}><Icon name="folderOpen" size={16} /> {t('files.move')}</button>
+            <button className="btn btn-danger" onClick={() => setSheet('trash')}><Icon name="trash" size={16} /> {t('common.delete')}</button>
           </div>
         </Sheet>
       )}

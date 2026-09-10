@@ -1,42 +1,78 @@
-export function formatBytes(bytes: number): string {
-  if (!bytes || bytes <= 0) return '0 بايت'
-  const units = ['بايت', 'كيلوبايت', 'ميغابايت', 'غيغابايت', 'تيرابايت']
+import { getLang, t } from './i18n'
+
+const UNIT_KEYS = ['unit.b', 'unit.kb', 'unit.mb', 'unit.gb', 'unit.tb']
+
+/** أرقام لاتينية دائمًا (كما في التصميم) مع فواصل حسب اللغة. */
+export function fmtNum(n: number, digits = 0): string {
+  const locale = getLang() === 'ar' ? 'ar-u-nu-latn' : 'en-US'
+  try {
+    return n.toLocaleString(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })
+  } catch {
+    return n.toFixed(digits)
+  }
+}
+
+export function formatBytes(bytes: number, compact = false): string {
+  if (!bytes || bytes <= 0) return `0 ${t(UNIT_KEYS[0])}`
   let value = bytes
   let i = 0
-  while (value >= 1024 && i < units.length - 1) {
+  while (value >= 1024 && i < UNIT_KEYS.length - 1) {
     value /= 1024
     i += 1
   }
-  return `${i === 0 ? Math.round(value) : value.toFixed(1)} ${units[i]}`
+  const digits = i === 0 ? 0 : value >= 100 || compact ? 0 : 1
+  return `${fmtNum(value, digits)} ${t(UNIT_KEYS[i])}`
 }
 
-export function formatDate(ms: number): string {
+/** الرقم والوحدة منفصلان — للبطاقات التي تعرض الرقم بحجم كبير. */
+export function splitBytes(bytes: number): { value: string; unit: string } {
+  if (!bytes || bytes <= 0) return { value: '0', unit: t(UNIT_KEYS[0]) }
+  let value = bytes
+  let i = 0
+  while (value >= 1024 && i < UNIT_KEYS.length - 1) {
+    value /= 1024
+    i += 1
+  }
+  return { value: fmtNum(value, i === 0 || value >= 100 ? 0 : 1), unit: t(UNIT_KEYS[i]) }
+}
+
+export function formatDate(ms: number, withTime = true): string {
   if (!ms) return ''
+  const locale = getLang() === 'ar' ? 'ar-u-nu-latn' : 'en-GB'
   try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ms))
+    return new Intl.DateTimeFormat(locale, withTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' }).format(new Date(ms))
   } catch {
-    return new Date(ms).toISOString()
+    return new Date(ms).toISOString().slice(0, 10)
+  }
+}
+
+export function formatShortDate(ms: number): string {
+  const locale = getLang() === 'ar' ? 'ar-u-nu-latn' : 'en-GB'
+  try {
+    return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date(ms))
+  } catch {
+    return ''
   }
 }
 
 export function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = Math.floor(sec % 60)
-  return `${m}:${String(s).padStart(2, '0')}`
+  return `${fmtNum(m)}:${String(Math.floor(s)).padStart(2, '0')}`
 }
 
 export function formatUptime(sec: number): string {
   const d = Math.floor(sec / 86_400)
   const h = Math.floor((sec % 86_400) / 3600)
   const m = Math.floor((sec % 3600) / 60)
-  if (d > 0) return `${d} يوم و${h} ساعة`
-  if (h > 0) return `${h} ساعة و${m} دقيقة`
-  return `${m} دقيقة`
+  if (d > 0) return `${fmtNum(d)}${t('unit.dayShort')} ${fmtNum(h)}${t('unit.hourShort')}`
+  if (h > 0) return `${fmtNum(h)}${t('unit.hourShort')} ${fmtNum(m)}${t('unit.minShort')}`
+  return `${fmtNum(m)}${t('unit.minShort')}`
 }
 
 export function formatMs(ms: number): string {
   const h = Math.floor(ms / 3_600_000)
   const m = Math.floor((ms % 3_600_000) / 60_000)
-  if (h > 0) return `${h} س ${m} د`
-  return `${m} د`
+  if (h > 0) return `${fmtNum(h)}${t('unit.hourShort')} ${fmtNum(m)}${t('unit.minShort')}`
+  return `${fmtNum(m)}${t('unit.minShort')}`
 }

@@ -2,7 +2,11 @@ import type { AppSettings } from './types'
 
 const KEY = 'cleanshelf.settings'
 
+import { loadLang } from './i18n'
+
 export const DEFAULT_SETTINGS: AppSettings = {
+  lang: loadLang(),
+  userName: '',
   theme: 'system',
   accentHue: 216,
   notifications: true,

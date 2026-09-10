@@ -1,5 +1,6 @@
 import { Native } from '../lib/native'
 import { useApp } from '../lib/appContext'
+import { t } from '../lib/i18n'
 import { Icon } from './Icon'
 
 /**
@@ -13,15 +14,9 @@ export function PermissionGate({ compact }: { compact?: boolean }): JSX.Element 
     <div className="notice notice-warn">
       <Icon name="shield" size={18} />
       <div style={{ flex: 1 }}>
-        <strong>يلزم إذن الوصول لكل الملفات</strong>
-        {!compact && (
-          <div style={{ marginTop: 2 }}>
-            بدونه لا يستطيع CleanShelf رؤية الملفات المؤقتة والتنزيلات والصور. لن يُرسل أي شيء خارج هاتفك.
-          </div>
-        )}
-        <button className="btn btn-sm btn-primary" onClick={() => Native.requestAllFiles()}>
-          منح الإذن
-        </button>
+        <strong>{t('perm.allFiles.title')}</strong>
+        {!compact && <div style={{ marginTop: 3 }}>{t('perm.allFiles.desc')}</div>}
+        <button className="btn btn-sm btn-dark" onClick={() => Native.requestAllFiles()}>{t('common.grant')}</button>
       </div>
     </div>
   )

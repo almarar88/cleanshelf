@@ -16,8 +16,8 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 function inferKind(message: string): ToastKind {
-  if (/فشل|تعذّر|تعذر|خطأ|غير متاح|أُلغي/.test(message)) return 'error'
-  if (/^تم|نجح|حُذف|أُنشئ|حُفظ|تحرير|استُرجع/.test(message)) return 'success'
+  if (/فشل|تعذّر|تعذر|خطأ|أُلغي|failed|error|stopped/i.test(message)) return 'error'
+  if (/^تم|نجح|حُذف|أُنشئ|حُفظ|استُرجع|freed|saved|moved|deleted|restored|renamed|cleared|shredded/i.test(message)) return 'success'
   return 'info'
 }
 
@@ -30,7 +30,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }): JSX.
   const showToast = useCallback((message: string, kind?: ToastKind) => {
     const id = nextId.current++
     setToasts((prev) => [...prev.slice(-1), { id, message, kind: kind ?? inferKind(message) }])
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3200)
+    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 3400)
   }, [])
 
   return (
@@ -38,10 +38,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }): JSX.
       {children}
       {toasts.length > 0 && (
         <div className="toast-stack">
-          {toasts.map((t) => (
-            <div key={t.id} className={`toast toast-${t.kind}`}>
-              <Icon name={KIND_ICON[t.kind]} size={17} />
-              <span>{t.message}</span>
+          {toasts.map((x) => (
+            <div key={x.id} className={`toast toast-${x.kind}`}>
+              <Icon name={KIND_ICON[x.kind]} size={18} />
+              <span>{x.message}</span>
             </div>
           ))}
         </div>
@@ -52,6 +52,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }): JSX.
 
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext)
-  if (!ctx) throw new Error('useToast يجب أن يُستخدم داخل ToastProvider')
+  if (!ctx) throw new Error('useToast خارج ToastProvider')
   return ctx
 }

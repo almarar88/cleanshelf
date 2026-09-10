@@ -189,6 +189,8 @@ export interface CleanHistoryEntry {
 }
 
 export interface AppSettings {
+  lang: 'ar' | 'en'
+  userName: string
   theme: 'system' | 'light' | 'dark'
   accentHue: number
   notifications: boolean

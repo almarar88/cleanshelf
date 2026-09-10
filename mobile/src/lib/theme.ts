@@ -1,5 +1,3 @@
-import type { IconName } from '../components/Icon'
-
 export type ThemeMode = 'system' | 'light' | 'dark'
 
 export function applyTheme(mode: ThemeMode): void {
@@ -8,18 +6,20 @@ export function applyTheme(mode: ThemeMode): void {
   else root.setAttribute('data-theme', mode)
 }
 
-export function applyAccent(hue: number): void {
-  document.documentElement.style.setProperty('--accent-h', String(hue))
-}
-
-export const THEME_LABEL: Record<ThemeMode, string> = { system: 'حسب النظام', light: 'فاتح', dark: 'داكن' }
-export const THEME_ICON: Record<ThemeMode, IconName> = { system: 'laptop', light: 'sun', dark: 'moon' }
-
-export const ACCENTS: { hue: number; name: string }[] = [
-  { hue: 216, name: 'أزرق' },
-  { hue: 262, name: 'بنفسجي' },
-  { hue: 330, name: 'وردي' },
-  { hue: 12, name: 'برتقالي' },
-  { hue: 152, name: 'أخضر' },
-  { hue: 188, name: 'سماوي' }
+/** ألوان التمييز المتاحة — تُستخدم في البطاقات والعناصر النشطة. */
+export const ACCENTS: { hue: number; name: string; yellow: string; orange: string }[] = [
+  { hue: 45, name: 'amber', yellow: '#f5e14c', orange: '#fc8b4f' },
+  { hue: 150, name: 'mint', yellow: '#c8ec71', orange: '#4bbf87' },
+  { hue: 200, name: 'sky', yellow: '#8fd7f5', orange: '#4a90e2' },
+  { hue: 280, name: 'lilac', yellow: '#d9b8f7', orange: '#8b5cf6' },
+  { hue: 15, name: 'coral', yellow: '#ffc4a3', orange: '#f2643c' },
+  { hue: 330, name: 'rose', yellow: '#f8b4d0', orange: '#e0479a' }
 ]
+
+export function applyAccent(hue: number): void {
+  const accent = ACCENTS.find((a) => a.hue === hue) ?? ACCENTS[0]
+  const root = document.documentElement
+  root.style.setProperty('--accent-h', String(accent.hue))
+  root.style.setProperty('--yellow', accent.yellow)
+  root.style.setProperty('--orange', accent.orange)
+}

@@ -1,24 +1,26 @@
 import { useState } from 'react'
 import { Native } from '../../lib/native'
 import { useToast } from '../../lib/toastContext'
-import { formatBytes, formatDuration } from '../../lib/format'
+import { fmtNum, formatBytes, formatDuration } from '../../lib/format'
+import { t } from '../../lib/i18n'
+import { tap } from '../../lib/haptics'
 import type { AudioTag, AudioTagWrite } from '../../lib/types'
 import { Icon } from '../../components/Icon'
-import { Check, EmptyState, Sheet, Notice } from '../../components/ui'
+import { Check, EmptyState, Ico, Notice, Sheet } from '../../components/ui'
 import { FolderPicker } from '../../components/FolderPicker'
 import { PermissionGate } from '../../components/PermissionGate'
 
 type Form = Omit<AudioTagWrite, 'path'>
 
-const FIELDS: { key: keyof Form; label: string }[] = [
-  { key: 'title', label: 'العنوان' },
-  { key: 'artist', label: 'الفنان' },
-  { key: 'album', label: 'الألبوم' },
-  { key: 'albumArtist', label: 'فنان الألبوم' },
-  { key: 'year', label: 'السنة' },
-  { key: 'genre', label: 'النوع' },
-  { key: 'track', label: 'رقم المسار' },
-  { key: 'comment', label: 'تعليق' }
+const FIELDS: { key: keyof Form; labelKey: string }[] = [
+  { key: 'title', labelKey: 'tags.title' },
+  { key: 'artist', labelKey: 'tags.artist' },
+  { key: 'album', labelKey: 'tags.album' },
+  { key: 'albumArtist', labelKey: 'tags.albumArtist' },
+  { key: 'year', labelKey: 'tags.year' },
+  { key: 'genre', labelKey: 'tags.genre' },
+  { key: 'track', labelKey: 'tags.track' },
+  { key: 'comment', labelKey: 'tags.comment' }
 ]
 
 /** يستخرج الحقول من اسم الملف بنمط مثل "%artist% - %title%" */
@@ -59,9 +61,9 @@ export function TagEditor(): JSX.Element {
     try {
       const r = await Native.readTags({ folder: path })
       setFiles(r.tags)
-      if (r.tags.length === 0) showToast('لا ملفات صوتية في هذا المجلد')
+      if (r.tags.length === 0) showToast(t('tags.none'))
     } catch (err) {
-      showToast('فشلت القراءة: ' + (err as Error).message)
+      showToast(t('toast.scanFailed', { msg: (err as Error).message }))
     } finally {
       setLoading(false)
     }
@@ -78,7 +80,7 @@ export function TagEditor(): JSX.Element {
     setSaving(true)
     try {
       const r = await Native.writeTags({ items: [{ path: editing.path, ...form, coverPath }] })
-      showToast(r.results[0].success ? 'تم حفظ الوسوم' : 'فشل الحفظ: ' + r.results[0].message)
+      showToast(r.results[0].success ? t('tags.saved') : t('tags.saveFailed', { msg: r.results[0].message }))
       setEditing(null)
       if (folder) load(folder)
     } finally {
@@ -91,7 +93,7 @@ export function TagEditor(): JSX.Element {
     try {
       const items: AudioTagWrite[] = [...selected].map((p) => ({ path: p, ...Object.fromEntries(Object.entries(form).filter(([, v]) => v !== undefined && v !== '')), coverPath }))
       const r = await Native.writeTags({ items })
-      showToast(`حُفظ ${r.results.filter((x) => x.success).length} من ${r.results.length}`)
+      showToast(t('tags.savedCount', { ok: fmtNum(r.results.filter((x) => x.success).length), total: fmtNum(r.results.length) }))
       setBatch('none')
       if (folder) load(folder)
     } finally {
@@ -105,11 +107,11 @@ export function TagEditor(): JSX.Element {
       return { path: p, ...parseFileName(tag.fileName, pattern) }
     }).filter((i) => Object.keys(i).length > 1)
     if (items.length === 0) {
-      showToast('لم يطابق النمط أي اسم ملف')
+      showToast(t('tags.noMatch'))
       return
     }
     const r = await Native.writeTags({ items })
-    showToast(`عُبّئت وسوم ${r.results.filter((x) => x.success).length} ملف`)
+    showToast(t('tags.filled', { n: fmtNum(r.results.filter((x) => x.success).length) }))
     setBatch('none')
     if (folder) load(folder)
   }
@@ -127,30 +129,38 @@ export function TagEditor(): JSX.Element {
         // نكمل
       }
     }
-    showToast(`أُعيدت تسمية ${ok} ملف`)
+    showToast(t('tags.renamed', { n: fmtNum(ok) }))
     setBatch('none')
     if (folder) load(folder)
   }
 
   function toggle(p: string): void {
+    tap()
     setSelected((prev) => { const n = new Set(prev); if (n.has(p)) n.delete(p); else n.add(p); return n })
   }
 
   return (
     <div className="page no-tabs">
       <PermissionGate compact />
-      <div className="toolbar">
-        <button className="btn btn-sm btn-primary" onClick={() => setPicking(true)} style={{ flex: 1 }}><Icon name="folderOpen" size={15} /> {folder ? folder.replace('/storage/emulated/0', 'الداخلية') : 'اختر مجلد أغاني'}</button>
-        {files.length > 0 && <button className="btn btn-sm" onClick={() => setSelected(selected.size === files.length ? new Set() : new Set(files.map((f) => f.path)))}>{selected.size === files.length ? 'إلغاء الكل' : 'تحديد الكل'}</button>}
+      <div className="toolbar" style={{ marginBottom: 14 }}>
+        <button className="btn btn-sm btn-dark" onClick={() => { tap(); setPicking(true) }} style={{ flex: 1, justifyContent: 'flex-start', minWidth: 0 }}>
+          <Icon name="folderOpen" size={16} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{folder ? folder.replace('/storage/emulated/0', t('files.internal')) : t('tags.pickFolder')}</span>
+        </button>
+        {files.length > 0 && (
+          <button className="btn btn-sm" onClick={() => { tap(); setSelected(selected.size === files.length ? new Set() : new Set(files.map((f) => f.path))) }}>
+            {selected.size === files.length ? t('common.clearAll') : t('common.selectAll')}
+          </button>
+        )}
       </div>
-      {loading ? <div className="card"><div className="skeleton" style={{ height: 60 }} /></div> : files.length === 0 ? <EmptyState icon="music" tone="tone-violet" text="اختر مجلدًا يحوي ملفات MP3 لعرض وتحرير وسومها والأغلفة" /> : (
+      {loading ? <div className="card"><div className="skeleton" style={{ height: 60 }} /></div> : files.length === 0 ? <EmptyState icon="music" tone="tone-violet" text={t('tags.empty')} /> : (
         <div className="card">
           {files.map((f) => (
-            <div key={f.path} className={`row ${selected.has(f.path) ? 'selected' : ''}`} onClick={() => openEdit(f)}>
+            <div key={f.path} className={`row ${selected.has(f.path) ? 'on' : ''}`} onClick={() => openEdit(f)}>
               <span onClick={(e) => { e.stopPropagation(); toggle(f.path) }}><Check on={selected.has(f.path)} /></span>
-              {f.coverThumb ? <img className="app-icon" src={`data:image/jpeg;base64,${f.coverThumb}`} alt="" /> : <div className="tile-icon sm tone-violet"><Icon name="music" size={17} /></div>}
+              {f.coverThumb ? <img className="app-icon" src={`data:image/jpeg;base64,${f.coverThumb}`} alt="" loading="lazy" /> : <Ico name="music" tone="tone-violet" size="sm" />}
               <div className="text">
-                <div className="title">{f.title || <span className="muted">بلا عنوان</span>} {!f.writable && <span className="badge badge-neutral">قراءة فقط</span>}</div>
+                <div className="title">{f.title || <span className="muted">{t('tags.noTitle')}</span>} {!f.writable && <span className="badge badge-neutral">{t('tags.readOnly')}</span>}</div>
                 <div className="desc">{[f.artist, f.album].filter(Boolean).join(' • ') || f.fileName}</div>
               </div>
               <span className="trail">{formatDuration(f.durationSec)}</span>
@@ -161,65 +171,65 @@ export function TagEditor(): JSX.Element {
 
       {selected.size > 0 && (
         <div className="action-bar no-tabs">
-          <button className="btn btn-sm" onClick={() => { setForm({}); setCoverPath(null); setBatch('edit') }}><Icon name="type" size={15} /> تعديل {selected.size}</button>
-          <button className="btn btn-sm" onClick={() => setBatch('fill')}><Icon name="keyboard" size={15} /> من الاسم</button>
-          <button className="btn btn-sm" onClick={() => setBatch('rename')}><Icon name="file" size={15} /> تسمية</button>
+          <button className="btn btn-sm" onClick={() => { tap(); setForm({}); setCoverPath(null); setBatch('edit') }}><Icon name="type" size={16} /> {t('tags.batchEdit', { n: fmtNum(selected.size) })}</button>
+          <button className="btn btn-sm" onClick={() => { tap(); setBatch('fill') }}><Icon name="keyboard" size={16} /> {t('tags.fromName')}</button>
+          <button className="btn btn-sm" onClick={() => { tap(); setBatch('rename') }}><Icon name="file" size={16} /> {t('tags.renameFrom')}</button>
         </div>
       )}
 
       {editing && (
         <Sheet onClose={() => setEditing(null)}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-            {editing.coverThumb && !coverPath ? <img className="cover" src={`data:image/jpeg;base64,${editing.coverThumb}`} alt="" /> : <div className="cover tile-icon tone-violet"><Icon name={coverPath ? 'check' : 'image'} size={24} /></div>}
+            {editing.coverThumb && !coverPath ? <img className="cover" src={`data:image/jpeg;base64,${editing.coverThumb}`} alt="" /> : <span className="cover"><Icon name={coverPath ? 'check' : 'image'} size={26} /></span>}
             <div style={{ minWidth: 0, flex: 1 }}>
               <h3 style={{ marginBottom: 2, wordBreak: 'break-all' }}>{editing.fileName}</h3>
               <div className="muted" style={{ fontSize: 12 }}>{editing.format} • {formatDuration(editing.durationSec)} • {formatBytes(editing.sizeBytes)}</div>
-              <button className="btn btn-sm" style={{ marginTop: 6 }} onClick={() => Native.pickImage().then((r) => r.path && setCoverPath(r.path))}><Icon name="image" size={14} /> {coverPath ? 'غلاف جديد محدَّد' : 'تغيير الغلاف'}</button>
+              <button className="btn btn-sm" style={{ marginTop: 7 }} onClick={() => Native.pickImage().then((r) => r.path && setCoverPath(r.path))}><Icon name="image" size={15} /> {coverPath ? t('tags.coverSet') : t('tags.changeCover')}</button>
             </div>
           </div>
-          {!editing.writable && <Notice kind="warn">الحفظ مدعوم لملفات MP3 فقط؛ هذا الملف للعرض.</Notice>}
+          {!editing.writable && <Notice kind="warn">{t('tags.mp3Only')}</Notice>}
           {FIELDS.map((f) => (
             <div key={f.key} className="field">
-              <label>{f.label}</label>
+              <label>{t(f.labelKey)}</label>
               <input type="text" value={form[f.key] ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} />
             </div>
           ))}
           <div className="actions">
-            <button className="btn" onClick={() => setEditing(null)}>إلغاء</button>
-            <button className="btn btn-primary" disabled={saving || !editing.writable} onClick={save}><Icon name="save" size={15} /> {saving ? 'جارٍ الحفظ…' : 'حفظ'}</button>
+            <button className="btn" onClick={() => setEditing(null)}>{t('common.cancel')}</button>
+            <button className="btn btn-dark" disabled={saving || !editing.writable} onClick={save}><Icon name="save" size={16} /> {saving ? t('common.loading') : t('common.save')}</button>
           </div>
         </Sheet>
       )}
 
       {batch === 'edit' && (
         <Sheet onClose={() => setBatch('none')}>
-          <h3>تعديل {selected.size} ملف دفعة واحدة</h3>
-          <p>تُكتب الحقول التي تملؤها فقط، ويبقى الباقي كما هو.</p>
-          <button className="btn btn-sm" style={{ marginBottom: 10 }} onClick={() => Native.pickImage().then((r) => r.path && setCoverPath(r.path))}><Icon name="image" size={14} /> {coverPath ? 'غلاف محدَّد للكل' : 'غلاف للكل'}</button>
+          <h3>{t('tags.batchEditTitle', { n: fmtNum(selected.size) })}</h3>
+          <p>{t('tags.batchEditHint')}</p>
+          <button className="btn btn-sm" style={{ marginBottom: 10 }} onClick={() => Native.pickImage().then((r) => r.path && setCoverPath(r.path))}><Icon name="image" size={15} /> {coverPath ? t('tags.coverSetAll') : t('tags.coverAll')}</button>
           {FIELDS.filter((f) => f.key !== 'title' && f.key !== 'track').map((f) => (
-            <div key={f.key} className="field"><label>{f.label}</label><input type="text" value={form[f.key] ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} /></div>
+            <div key={f.key} className="field"><label>{t(f.labelKey)}</label><input type="text" value={form[f.key] ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} /></div>
           ))}
-          <div className="actions"><button className="btn" onClick={() => setBatch('none')}>إلغاء</button><button className="btn btn-primary" disabled={saving} onClick={saveBatchEdit}>حفظ للكل</button></div>
+          <div className="actions"><button className="btn" onClick={() => setBatch('none')}>{t('common.cancel')}</button><button className="btn btn-dark" disabled={saving} onClick={saveBatchEdit}>{t('tags.saveAll')}</button></div>
         </Sheet>
       )}
 
       {(batch === 'fill' || batch === 'rename') && (
         <Sheet onClose={() => setBatch('none')}>
-          <h3>{batch === 'fill' ? 'تعبئة الوسوم من اسم الملف' : 'إعادة التسمية من الوسوم'}</h3>
-          <p>المتغيّرات: <code>%title%</code> <code>%artist%</code> <code>%album%</code> <code>%year%</code> <code>%track%</code></p>
+          <h3>{batch === 'fill' ? t('tags.fillTitle') : t('tags.renameTitle')}</h3>
+          <p>{t('tags.vars')} <code>%title%</code> <code>%artist%</code> <code>%album%</code> <code>%year%</code> <code>%track%</code></p>
           <input type="text" value={pattern} onChange={(e) => setPattern(e.target.value)} dir="ltr" />
           <div className="card" style={{ marginTop: 12, maxHeight: '30vh', overflowY: 'auto' }}>
             {[...selected].slice(0, 15).map((p) => {
               const tag = files.find((f) => f.path === p)!
-              const preview = batch === 'fill' ? Object.entries(parseFileName(tag.fileName, pattern)).map(([k, v]) => `${k}: ${v}`).join(' • ') || 'لا مطابقة' : nameFromTags(tag, pattern)
-              return <div key={p} className="row" style={{ minHeight: 44, padding: '8px 14px', cursor: 'default' }}><div className="text"><div className="desc">{tag.fileName}</div><div className="title" style={{ fontSize: 13 }}>{preview}</div></div></div>
+              const preview = batch === 'fill' ? Object.entries(parseFileName(tag.fileName, pattern)).map(([k, v]) => `${k}: ${v}`).join(' • ') || t('tags.noMatch') : nameFromTags(tag, pattern)
+              return <div key={p} className="row" style={{ minHeight: 44, cursor: 'default' }}><div className="text"><div className="desc">{tag.fileName}</div><div className="title" style={{ fontSize: 13.5 }}>{preview}</div></div></div>
             })}
           </div>
-          <div className="actions"><button className="btn" onClick={() => setBatch('none')}>إلغاء</button><button className="btn btn-primary" onClick={batch === 'fill' ? applyFill : applyRename}>تطبيق</button></div>
+          <div className="actions"><button className="btn" onClick={() => setBatch('none')}>{t('common.cancel')}</button><button className="btn btn-dark" onClick={batch === 'fill' ? applyFill : applyRename}>{t('files.batchApply')}</button></div>
         </Sheet>
       )}
 
-      {picking && <FolderPicker title="مجلد الأغاني" onPick={(p) => { setFolder(p); setPicking(false); load(p) }} onCancel={() => setPicking(false)} />}
+      {picking && <FolderPicker title={t('tags.pickFolder')} onPick={(p) => { setFolder(p); setPicking(false); load(p) }} onCancel={() => setPicking(false)} />}
     </div>
   )
 }

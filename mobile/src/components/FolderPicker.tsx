@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Native } from '../lib/native'
+import { t } from '../lib/i18n'
 import type { DirListing, StorageRoot } from '../lib/types'
 import { Icon } from './Icon'
-import { Sheet } from './ui'
+import { Ico, Sheet } from './ui'
 
-/** اختيار مجلد عبر التصفّح داخل ورقة سفلية (لنقل الملفات وفحص أداة على مجلد). */
+/** اختيار مجلد عبر التصفّح داخل ورقة سفلية (لنقل الملفات وتشغيل أداة على مجلد). */
 export function FolderPicker({ title, onPick, onCancel }: { title: string; onPick: (path: string) => void; onCancel: () => void }): JSX.Element {
   const [roots, setRoots] = useState<StorageRoot[]>([])
   const [listing, setListing] = useState<DirListing | null>(null)
@@ -21,47 +22,48 @@ export function FolderPicker({ title, onPick, onCancel }: { title: string; onPic
     }
   }
 
+  const subFolders = listing?.entries.filter((e) => e.isDirectory) ?? []
+
   return (
     <Sheet onClose={onCancel}>
       <h3>{title}</h3>
       {listing ? (
         <>
-          <div className="breadcrumbs">
-            <span className="crumb" onClick={() => setListing(null)}>الأقسام</span>
-            <span className="sep">/</span>
-            <span className="crumb current mono" style={{ direction: 'ltr' }}>{listing.path.replace('/storage/emulated/0', 'الداخلية')}</span>
+          <div className="crumbs">
+            <span className="c" onClick={() => setListing(null)}>{t('files.sections')}</span>
+            <span className="c cur mono" style={{ direction: 'ltr' }}>{listing.path.replace('/storage/emulated/0', t('files.internal'))}</span>
           </div>
           <div className="card" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
             {listing.parent && (
-              <div className="row" onClick={() => open(listing.parent!)}>
-                <Icon name="arrowUp" size={18} className="muted" />
-                <div className="text"><div className="title">المجلد الأعلى</div></div>
+              <div className="row" onClick={() => open(listing.parent as string)}>
+                <Ico name="arrowUp" tone="tone-ink" size="sm" />
+                <div className="text"><div className="title">{t('files.parent')}</div></div>
               </div>
             )}
-            {listing.entries.filter((e) => e.isDirectory).map((e) => (
+            {subFolders.map((e) => (
               <div key={e.path} className="row" onClick={() => open(e.path)}>
-                <Icon name="folder" size={18} className="muted" />
+                <Ico name="folder" tone="tone-yellow" size="sm" />
                 <div className="text"><div className="title">{e.name}</div></div>
-                <Icon name="chevron" size={14} className="muted" style={{ transform: 'scaleX(-1)' }} />
+                <Icon name="chevron" size={15} className="muted flip-rtl" />
               </div>
             ))}
-            {listing.entries.filter((e) => e.isDirectory).length === 0 && <div className="empty-state" style={{ padding: 24 }}>لا مجلدات فرعية</div>}
+            {subFolders.length === 0 && <div className="empty" style={{ padding: 22 }}>{t('files.noSub')}</div>}
           </div>
         </>
       ) : (
         <div className="card">
           {roots.map((r) => (
             <div key={r.path} className="row" onClick={() => open(r.path)}>
-              <Icon name="hardDrive" size={18} className="muted" />
+              <Ico name="hardDrive" tone="tone-blue" size="sm" />
               <div className="text"><div className="title">{r.label}</div></div>
-              <Icon name="chevron" size={14} className="muted" style={{ transform: 'scaleX(-1)' }} />
+              <Icon name="chevron" size={15} className="muted flip-rtl" />
             </div>
           ))}
         </div>
       )}
       <div className="actions">
-        <button className="btn" onClick={onCancel}>إلغاء</button>
-        <button className="btn btn-primary" disabled={!listing} onClick={() => listing && onPick(listing.path)}>اختيار هذا المجلد</button>
+        <button className="btn" onClick={onCancel}>{t('common.cancel')}</button>
+        <button className="btn btn-dark" disabled={!listing} onClick={() => listing && onPick(listing.path)}>{t('files.pickFolder')}</button>
       </div>
     </Sheet>
   )

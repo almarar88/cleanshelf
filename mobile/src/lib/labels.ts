@@ -1,16 +1,37 @@
 import type { IconName } from '../components/Icon'
+import { t } from './i18n'
 
-export const JUNK_LABELS: Record<string, { title: string; desc: string; icon: IconName }> = {
-  temp_files: { title: 'ملفات مؤقتة', desc: 'ملفات .tmp و .part و .bak تركتها التطبيقات والتنزيلات المقطوعة', icon: 'file' },
-  log_files: { title: 'ملفات السجلات', desc: 'سجلات .log تشخيصية لا يحتاجها أحد', icon: 'fileText' },
-  thumbnails: { title: 'الصور المصغّرة', desc: 'مجلدات .thumbnails يعيد النظام بناءها', icon: 'image' },
-  empty_folders: { title: 'مجلدات فارغة', desc: 'مجلدات لا تحوي أي ملف', icon: 'folder' },
-  own_cache: { title: 'ذاكرة CleanShelf المؤقتة', desc: 'ملفات هذا التطبيق المؤقتة', icon: 'sparkles' },
-  apk_files: { title: 'ملفات تثبيت APK', desc: 'حزم تثبيت منزَّلة — احذفها إن ثبّت التطبيقات بالفعل', icon: 'package' },
-  cache_folders: { title: 'مجلدات ذاكرة مؤقتة', desc: 'مجلدات باسم cache خارج مجلد Android تُعاد بناؤها عادةً', icon: 'layers' },
-  residual_folders: { title: 'مخلّفات تطبيقات محذوفة', desc: 'مجلدات في الذاكرة لا تطابق أي تطبيق مثبَّت — راجعها قبل الحذف', icon: 'trash' }
+const ICONS: Record<string, IconName> = {
+  temp_files: 'file',
+  log_files: 'fileText',
+  thumbnails: 'image',
+  empty_folders: 'folder',
+  own_cache: 'sparkles',
+  apk_files: 'package',
+  cache_folders: 'layers',
+  residual_folders: 'trash'
 }
 
-export function junkLabel(id: string): { title: string; desc: string; icon: IconName } {
-  return JUNK_LABELS[id] ?? { title: id, desc: '', icon: 'file' }
+const TONES: Record<string, string> = {
+  temp_files: 'tone-blue',
+  log_files: 'tone-teal',
+  thumbnails: 'tone-violet',
+  empty_folders: 'tone-yellow',
+  own_cache: 'tone-green',
+  apk_files: 'tone-orange',
+  cache_folders: 'tone-orange',
+  residual_folders: 'tone-red'
+}
+
+export function junkLabel(id: string): { title: string; desc: string; icon: IconName; tone: string } {
+  return {
+    title: t(`junk.${id}`),
+    desc: t(`junk.${id}.d`),
+    icon: ICONS[id] ?? 'file',
+    tone: TONES[id] ?? 'tone-ink'
+  }
+}
+
+export function socialLabel(id: string): string {
+  return t(`social.cat.${id}`)
 }

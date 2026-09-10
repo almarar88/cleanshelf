@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { Native } from '../../lib/native'
 import { useApp } from '../../lib/appContext'
 import { useToast } from '../../lib/toastContext'
-import { formatBytes, formatDate } from '../../lib/format'
+import { t } from '../../lib/i18n'
+import { fmtNum, formatBytes, formatDate } from '../../lib/format'
+import { markTaskDone } from '../../lib/plan'
+import { tap } from '../../lib/haptics'
 import type { DuplicateGroup, LargeFile, OldDownload, ScanProgress } from '../../lib/types'
 import { Icon } from '../../components/Icon'
-import { Check, ConfirmSheet, EmptyState, ProgressPanel, fileIcon } from '../../components/ui'
+import { Check, ConfirmSheet, EmptyState, Ico, ProgressPanel, fileIcon } from '../../components/ui'
 import { FolderPicker } from '../../components/FolderPicker'
 import { PermissionGate } from '../../components/PermissionGate'
 
@@ -25,25 +28,32 @@ function useProgress(): ScanProgress | null {
 
 function useSelection(): [Set<string>, (p: string) => void, (s: Set<string>) => void] {
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const toggle = (p: string): void =>
+  const toggle = (p: string): void => {
+    tap()
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(p)) next.delete(p)
       else next.add(p)
       return next
     })
+  }
   return [selected, toggle, setSelected]
+}
+
+function scanError(err: unknown, showToast: (m: string) => void): void {
+  const msg = (err as Error).message ?? ''
+  showToast(/أُلغي|cancel/i.test(msg) ? t('toast.stopped') : t('toast.scanFailed', { msg }))
 }
 
 function ScopeBar({ root, onPick, onScan, scanning, extra }: { root: string; onPick: () => void; onScan: () => void; scanning: boolean; extra?: React.ReactNode }): JSX.Element {
   return (
-    <div className="toolbar">
+    <div className="toolbar" style={{ marginBottom: 14 }}>
       <button className="btn btn-sm" onClick={onPick} disabled={scanning} style={{ flex: 1, justifyContent: 'flex-start', minWidth: 0 }}>
-        <Icon name="folderOpen" size={15} />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{root === ROOT ? 'كل الذاكرة الداخلية' : root.replace(ROOT + '/', '')}</span>
+        <Icon name="folderOpen" size={16} />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{root === ROOT ? t('scope.allInternal') : root.replace(`${ROOT}/`, '')}</span>
       </button>
       {extra}
-      <button className="btn btn-sm btn-primary" onClick={onScan} disabled={scanning}><Icon name="search" size={15} /> فحص</button>
+      <button className="btn btn-sm btn-dark" onClick={() => { tap(); onScan() }} disabled={scanning}><Icon name="search" size={16} /> {t('common.scan')}</button>
     </div>
   )
 }
@@ -52,7 +62,24 @@ function TrashBar({ count, bytes, onTrash }: { count: number; bytes: number; onT
   if (count === 0) return null
   return (
     <div className="action-bar no-tabs">
-      <button className="btn btn-danger" onClick={onTrash}><Icon name="trash" size={16} /> نقل {count} إلى سلة المهملات ({formatBytes(bytes)})</button>
+      <button className="btn btn-dark" onClick={() => { tap(); onTrash() }}>
+        <Icon name="trash" size={17} /> {t('trashBar.move', { n: fmtNum(count), size: formatBytes(bytes) })}
+      </button>
+    </div>
+  )
+}
+
+function StatPair({ aLabel, aValue, bLabel, bValue }: { aLabel: string; aValue: string; bLabel: string; bValue: string }): JSX.Element {
+  return (
+    <div className="grid grid-2" style={{ marginBottom: 14 }}>
+      <div className="card card-pad">
+        <div className="card-sub">{aLabel}</div>
+        <div className="card-title" style={{ fontSize: 22, marginTop: 2 }}>{aValue}</div>
+      </div>
+      <div className="card card-pad">
+        <div className="card-sub">{bLabel}</div>
+        <div className="card-title" style={{ fontSize: 22, marginTop: 2 }}>{bValue}</div>
+      </div>
     </div>
   )
 }
@@ -77,9 +104,9 @@ export function Duplicates(): JSX.Element {
       setGroups(r.groups)
       // نحدّد تلقائيًا كل النسخ عدا الأولى في كل مجموعة
       setSelected(new Set(r.groups.flatMap((g) => g.files.slice(1))))
-      if (r.groups.length === 0) showToast('لا ملفات مكرّرة')
+      if (r.groups.length === 0) showToast(t('dup.none'))
     } catch (err) {
-      showToast((err as Error).message.includes('أُلغي') ? 'أُوقف الفحص' : 'فشل الفحص: ' + (err as Error).message)
+      scanError(err, showToast)
     } finally {
       setScanning(false)
     }
@@ -91,7 +118,8 @@ export function Duplicates(): JSX.Element {
   async function trash(): Promise<void> {
     setConfirm(false)
     const r = await Native.trash({ paths: [...selected] })
-    showToast(`نُقل ${r.results.filter((x) => x.success).length} من ${r.results.length} إلى سلة المهملات`)
+    showToast(t('moved.partial', { ok: fmtNum(r.results.filter((x) => x.success).length), total: fmtNum(r.results.length) }))
+    markTaskDone('dup')
     scan()
   }
 
@@ -99,20 +127,26 @@ export function Duplicates(): JSX.Element {
     <div className="page no-tabs">
       <PermissionGate compact />
       <ScopeBar root={root} onPick={() => setPicking(true)} onScan={scan} scanning={scanning} />
-      {scanning ? <ProgressPanel progress={progress} onCancel={() => Native.cancelScan()} /> : groups === null ? <EmptyState icon="copy" tone="tone-pink" text="يقارن الملفات بمحتواها لا باسمها، فيجد النسخ المتطابقة أينما كانت" /> : groups.length === 0 ? <EmptyState icon="checkCircle" tone="tone-green" text="لا ملفات مكرّرة في هذا النطاق" /> : (
+      {scanning ? (
+        <ProgressPanel progress={progress} onCancel={() => Native.cancelScan()} />
+      ) : groups === null ? (
+        <EmptyState icon="copy" tone="tone-pink" text={t('dup.empty')} />
+      ) : groups.length === 0 ? (
+        <EmptyState icon="checkCircle" tone="tone-green" text={t('dup.none')} />
+      ) : (
         <>
-          <div className="muted" style={{ fontSize: 12.5, margin: '0 4px 8px' }}>{groups.length} مجموعة • {formatBytes(wasted)} مساحة مهدرة</div>
+          <div className="section-title">{t('dup.groups', { n: fmtNum(groups.length), size: formatBytes(wasted) })}</div>
           {groups.map((g) => (
             <div key={g.hash} className="card" style={{ marginBottom: 10 }}>
-              <div className="row" style={{ cursor: 'default', minHeight: 40, padding: '8px 14px' }}>
-                <div className="text"><div className="desc">{g.files.length} نسخ × {formatBytes(g.sizeBytes)}</div></div>
+              <div className="row" style={{ cursor: 'default', minHeight: 40 }}>
+                <div className="text"><div className="desc">{t('dup.copies', { n: fmtNum(g.files.length), size: formatBytes(g.sizeBytes) })}</div></div>
               </div>
               {g.files.map((f) => (
-                <div key={f} className={`row ${selected.has(f) ? 'selected' : ''}`} onClick={() => toggle(f)}>
+                <div key={f} className={`row ${selected.has(f) ? 'on' : ''}`} onClick={() => toggle(f)}>
                   <Check on={selected.has(f)} />
                   <div className="text">
                     <div className="title">{f.split('/').pop()}</div>
-                    <div className="desc mono">{f.slice(0, f.lastIndexOf('/')).replace(ROOT, '')}</div>
+                    <div className="desc mono" style={{ direction: 'ltr', textAlign: 'start' }}>{f.slice(0, f.lastIndexOf('/')).replace(ROOT, '')}</div>
                   </div>
                 </div>
               ))}
@@ -121,8 +155,10 @@ export function Duplicates(): JSX.Element {
         </>
       )}
       <TrashBar count={selected.size} bytes={bytes} onTrash={() => setConfirm(true)} />
-      {picking && <FolderPicker title="نطاق البحث" onPick={(p) => { setRoot(p); setPicking(false) }} onCancel={() => setPicking(false)} />}
-      {confirm && <ConfirmSheet title="نقل النسخ المكرّرة" message={`سيُنقل ${selected.size} ملف إلى سلة المهملات وتبقى نسخة واحدة من كل مجموعة.`} confirmLabel="نقل" onConfirm={trash} onCancel={() => setConfirm(false)} />}
+      {picking && <FolderPicker title={t('scope.pick')} onPick={(p) => { setRoot(p); setPicking(false) }} onCancel={() => setPicking(false)} />}
+      {confirm && (
+        <ConfirmSheet title={t('common.moveToTrash')} message={t('dup.confirm', { n: fmtNum(selected.size) })} confirmLabel={t('common.trash')} onConfirm={trash} onCancel={() => setConfirm(false)} />
+      )}
     </div>
   )
 }
@@ -147,7 +183,7 @@ export function LargeFiles(): JSX.Element {
       const r = await Native.findLargeFiles({ root, minSizeBytes: minMb * MB, limit: 200 })
       setFiles(r.files)
     } catch (err) {
-      showToast((err as Error).message.includes('أُلغي') ? 'أُوقف الفحص' : 'فشل الفحص: ' + (err as Error).message)
+      scanError(err, showToast)
     } finally {
       setScanning(false)
     }
@@ -158,27 +194,41 @@ export function LargeFiles(): JSX.Element {
   async function trash(): Promise<void> {
     setConfirm(false)
     const r = await Native.trash({ paths: [...selected] })
-    showToast(`نُقل ${r.results.filter((x) => x.success).length} من ${r.results.length} إلى سلة المهملات`)
+    showToast(t('moved.partial', { ok: fmtNum(r.results.filter((x) => x.success).length), total: fmtNum(r.results.length) }))
     scan()
   }
 
   return (
     <div className="page no-tabs">
       <PermissionGate compact />
-      <ScopeBar root={root} onPick={() => setPicking(true)} onScan={scan} scanning={scanning} extra={
-        <select value={minMb} onChange={(e) => setMinMb(Number(e.target.value))} style={{ width: 'auto', minHeight: 36, padding: '4px 10px' }}>
-          {[10, 50, 100, 500, 1024].map((m) => <option key={m} value={m}>≥ {m >= 1024 ? '1 غ.ب' : `${m} م.ب`}</option>)}
-        </select>
-      } />
-      {scanning ? <ProgressPanel progress={progress} onCancel={() => Native.cancelScan()} /> : files === null ? <EmptyState icon="package" tone="tone-orange" text="اعرف أي الملفات تلتهم مساحتك وقرّر بنفسك" /> : files.length === 0 ? <EmptyState icon="checkCircle" tone="tone-green" text="لا ملفات بهذا الحجم" /> : (
+      <ScopeBar
+        root={root}
+        onPick={() => setPicking(true)}
+        onScan={scan}
+        scanning={scanning}
+        extra={
+          <select value={minMb} onChange={(e) => setMinMb(Number(e.target.value))} style={{ width: 'auto', minHeight: 38, padding: '4px 12px' }}>
+            {[10, 50, 100, 500, 1024].map((m) => (
+              <option key={m} value={m}>{t('large.min', { v: m >= 1024 ? formatBytes(1024 * MB) : formatBytes(m * MB) })}</option>
+            ))}
+          </select>
+        }
+      />
+      {scanning ? (
+        <ProgressPanel progress={progress} onCancel={() => Native.cancelScan()} />
+      ) : files === null ? (
+        <EmptyState icon="package" tone="tone-orange" text={t('large.empty')} />
+      ) : files.length === 0 ? (
+        <EmptyState icon="checkCircle" tone="tone-green" text={t('large.none')} />
+      ) : (
         <div className="card">
-          {files.map((f) => (
-            <div key={f.path} className={`row ${selected.has(f.path) ? 'selected' : ''}`} onClick={() => toggle(f.path)}>
+          {files.map((f, i) => (
+            <div key={f.path} className={`row ${selected.has(f.path) ? 'on' : ''}`} style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }} onClick={() => toggle(f.path)}>
               <Check on={selected.has(f.path)} />
-              <div className="tile-icon sm"><Icon name={fileIcon(false, f.extension)} size={17} /></div>
+              <Ico name={fileIcon(false, f.extension)} tone="tone-ink" size="sm" />
               <div className="text">
                 <div className="title">{f.name}</div>
-                <div className="desc">{formatDate(f.modifiedAt)} • {f.path.slice(0, f.path.lastIndexOf('/')).replace(ROOT, '') || '/'}</div>
+                <div className="desc">{formatDate(f.modifiedAt, false)} • {f.path.slice(0, f.path.lastIndexOf('/')).replace(ROOT, '') || '/'}</div>
               </div>
               <span className="trail">{formatBytes(f.sizeBytes)}</span>
             </div>
@@ -186,8 +236,10 @@ export function LargeFiles(): JSX.Element {
         </div>
       )}
       <TrashBar count={selected.size} bytes={bytes} onTrash={() => setConfirm(true)} />
-      {picking && <FolderPicker title="نطاق البحث" onPick={(p) => { setRoot(p); setPicking(false) }} onCancel={() => setPicking(false)} />}
-      {confirm && <ConfirmSheet title="نقل إلى سلة المهملات" message={`سيُنقل ${selected.size} ملف (${formatBytes(bytes)}) إلى سلة المهملات ويمكن استرجاعه.`} confirmLabel="نقل" onConfirm={trash} onCancel={() => setConfirm(false)} />}
+      {picking && <FolderPicker title={t('scope.pick')} onPick={(p) => { setRoot(p); setPicking(false) }} onCancel={() => setPicking(false)} />}
+      {confirm && (
+        <ConfirmSheet title={t('common.moveToTrash')} message={t('trashBar.confirm', { n: fmtNum(selected.size), size: formatBytes(bytes) })} confirmLabel={t('common.trash')} onConfirm={trash} onCancel={() => setConfirm(false)} />
+      )}
     </div>
   )
 }
@@ -210,7 +262,7 @@ export function OldDownloads(): JSX.Element {
       const r = await Native.oldDownloads({ days: withDays })
       setItems(r.items)
     } catch (err) {
-      showToast('فشل الفحص: ' + (err as Error).message)
+      scanError(err, showToast)
     } finally {
       setLoading(false)
     }
@@ -227,43 +279,58 @@ export function OldDownloads(): JSX.Element {
   async function trash(): Promise<void> {
     setConfirm(false)
     const r = await Native.trash({ paths: [...selected] })
-    showToast(`نُقل ${r.results.filter((x) => x.success).length} من ${r.results.length} إلى سلة المهملات`)
+    showToast(t('moved.partial', { ok: fmtNum(r.results.filter((x) => x.success).length), total: fmtNum(r.results.length) }))
+    markTaskDone('downloads')
     scan()
   }
 
   return (
     <div className="page no-tabs">
       <PermissionGate compact />
-      <div className="toolbar">
+      <div className="toolbar" style={{ marginBottom: 14 }}>
         <select value={days} onChange={(e) => { const d = Number(e.target.value); setDays(d); scan(d) }} style={{ flex: 1 }}>
-          {[7, 14, 30, 60, 90, 180, 365].map((d) => <option key={d} value={d}>أقدم من {d} يوم</option>)}
+          {[7, 14, 30, 60, 90, 180, 365].map((d) => <option key={d} value={d}>{t('dl.olderThan', { n: fmtNum(d) })}</option>)}
         </select>
-        {items && items.length > 0 && <button className="btn btn-sm" onClick={() => setSelected(selected.size === items.length ? new Set() : new Set(items.map((i) => i.path)))}>{selected.size === items.length ? 'إلغاء الكل' : 'تحديد الكل'}</button>}
+        {items && items.length > 0 && (
+          <button className="btn btn-sm" onClick={() => { tap(); setSelected(selected.size === items.length ? new Set() : new Set(items.map((i) => i.path))) }}>
+            {selected.size === items.length ? t('common.clearAll') : t('common.selectAll')}
+          </button>
+        )}
       </div>
-      <div className="grid grid-2" style={{ marginBottom: 12 }}>
-        <div className="card stat-tile"><span className="label"><Icon name="download" size={13} /> عناصر قديمة</span><span className="value">{loading ? '…' : items?.length ?? 0}</span></div>
-        <div className="card stat-tile"><span className="label"><Icon name="hardDrive" size={13} /> حجمها</span><span className="value">{loading ? '…' : formatBytes(total)}</span></div>
-      </div>
-      {!loading && items && items.length === 0 ? <EmptyState icon="checkCircle" tone="tone-green" text={`لا شيء أقدم من ${days} يومًا في التنزيلات`} /> : items && (
-        <div className="card">
-          {items.map((d) => (
-            <div key={d.path} className={`row ${selected.has(d.path) ? 'selected' : ''}`} onClick={() => toggle(d.path)}>
-              <Check on={selected.has(d.path)} />
-              <div className="tile-icon sm"><Icon name={fileIcon(d.isDirectory, d.extension)} size={17} /></div>
-              <div className="text">
-                <div className="title">{d.name}</div>
-                <div className="desc">{formatDate(d.modifiedAt)}</div>
+
+      <StatPair
+        aLabel={t('dl.oldItems')}
+        aValue={loading ? '—' : fmtNum(items?.length ?? 0)}
+        bLabel={t('dl.theirSize')}
+        bValue={loading ? '—' : formatBytes(total)}
+      />
+
+      {!loading && items && items.length === 0 ? (
+        <EmptyState icon="checkCircle" tone="tone-green" text={t('dl.none', { n: fmtNum(days) })} />
+      ) : (
+        items && (
+          <div className="card">
+            {items.map((d, i) => (
+              <div key={d.path} className={`row ${selected.has(d.path) ? 'on' : ''}`} style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }} onClick={() => toggle(d.path)}>
+                <Check on={selected.has(d.path)} />
+                <Ico name={fileIcon(d.isDirectory, d.extension)} tone="tone-blue" size="sm" />
+                <div className="text">
+                  <div className="title">{d.name}</div>
+                  <div className="desc">{formatDate(d.modifiedAt, false)}</div>
+                </div>
+                <div className="trail" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                  <span>{formatBytes(d.sizeBytes)}</span>
+                  <span className={`badge ${d.ageDays > 180 ? 'badge-danger' : d.ageDays > 60 ? 'badge-warn' : 'badge-neutral'}`}>{t('set.days', { n: fmtNum(d.ageDays) })}</span>
+                </div>
               </div>
-              <div className="trail" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                <span>{formatBytes(d.sizeBytes)}</span>
-                <span className={`badge ${d.ageDays > 180 ? 'badge-danger' : d.ageDays > 60 ? 'badge-caution' : 'badge-neutral'}`}>{d.ageDays} يوم</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
       <TrashBar count={selected.size} bytes={bytes} onTrash={() => setConfirm(true)} />
-      {confirm && <ConfirmSheet title="نقل إلى سلة المهملات" message={`سيُنقل ${selected.size} عنصر (${formatBytes(bytes)}) إلى سلة المهملات ويمكن استرجاعه.`} confirmLabel="نقل" onConfirm={trash} onCancel={() => setConfirm(false)} />}
+      {confirm && (
+        <ConfirmSheet title={t('common.moveToTrash')} message={t('trashBar.confirm', { n: fmtNum(selected.size), size: formatBytes(bytes) })} confirmLabel={t('common.trash')} onConfirm={trash} onCancel={() => setConfirm(false)} />
+      )}
     </div>
   )
 }
@@ -288,7 +355,7 @@ export function EmptyFolders(): JSX.Element {
       setFolders(r.folders)
       setSelected(new Set(r.folders))
     } catch (err) {
-      showToast('فشل الفحص: ' + (err as Error).message)
+      scanError(err, showToast)
     } finally {
       setScanning(false)
     }
@@ -297,7 +364,7 @@ export function EmptyFolders(): JSX.Element {
   async function remove(): Promise<void> {
     setConfirm(false)
     const r = await Native.trash({ paths: [...selected] })
-    showToast(`حُذف ${r.results.filter((x) => x.success).length} مجلد`)
+    showToast(t('empty.deleted', { n: fmtNum(r.results.filter((x) => x.success).length) }))
     scan()
   }
 
@@ -305,20 +372,37 @@ export function EmptyFolders(): JSX.Element {
     <div className="page no-tabs">
       <PermissionGate compact />
       <ScopeBar root={root} onPick={() => setPicking(true)} onScan={scan} scanning={scanning} />
-      {scanning ? <ProgressPanel progress={progress} onCancel={() => Native.cancelScan()} /> : folders === null ? <EmptyState icon="folderSearch" tone="tone-amber" text="مجلدات فارغة تمامًا تتركها التطبيقات بعد الحذف" /> : folders.length === 0 ? <EmptyState icon="checkCircle" tone="tone-green" text="لا مجلدات فارغة" /> : (
+      {scanning ? (
+        <ProgressPanel progress={progress} onCancel={() => Native.cancelScan()} />
+      ) : folders === null ? (
+        <EmptyState icon="folderSearch" tone="tone-yellow" text={t('empty.empty')} />
+      ) : folders.length === 0 ? (
+        <EmptyState icon="checkCircle" tone="tone-green" text={t('empty.none')} />
+      ) : (
         <div className="card">
-          {folders.map((f) => (
-            <div key={f} className={`row ${selected.has(f) ? 'selected' : ''}`} onClick={() => toggle(f)}>
+          {folders.map((f, i) => (
+            <div key={f} className={`row ${selected.has(f) ? 'on' : ''}`} style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }} onClick={() => toggle(f)}>
               <Check on={selected.has(f)} />
-              <Icon name="folder" size={17} className="muted" />
-              <div className="text"><div className="title">{f.split('/').pop()}</div><div className="desc mono">{f.slice(0, f.lastIndexOf('/')).replace(ROOT, '') || '/'}</div></div>
+              <Ico name="folder" tone="tone-yellow" size="sm" />
+              <div className="text">
+                <div className="title">{f.split('/').pop()}</div>
+                <div className="desc mono" style={{ direction: 'ltr', textAlign: 'start' }}>{f.slice(0, f.lastIndexOf('/')).replace(ROOT, '') || '/'}</div>
+              </div>
             </div>
           ))}
         </div>
       )}
-      {selected.size > 0 && <div className="action-bar no-tabs"><button className="btn btn-danger" onClick={() => setConfirm(true)}><Icon name="trash" size={16} /> حذف {selected.size} مجلد</button></div>}
-      {picking && <FolderPicker title="نطاق البحث" onPick={(p) => { setRoot(p); setPicking(false) }} onCancel={() => setPicking(false)} />}
-      {confirm && <ConfirmSheet title="حذف المجلدات الفارغة" message={`${selected.size} مجلد فارغ سيُنقل إلى سلة المهملات.`} confirmLabel="حذف" onConfirm={remove} onCancel={() => setConfirm(false)} />}
+      {selected.size > 0 && (
+        <div className="action-bar no-tabs">
+          <button className="btn btn-dark" onClick={() => { tap(); setConfirm(true) }}>
+            <Icon name="trash" size={17} /> {t('empty.deleteBtn', { n: fmtNum(selected.size) })}
+          </button>
+        </div>
+      )}
+      {picking && <FolderPicker title={t('scope.pick')} onPick={(p) => { setRoot(p); setPicking(false) }} onCancel={() => setPicking(false)} />}
+      {confirm && (
+        <ConfirmSheet title={t('empty.deleteBtn', { n: fmtNum(selected.size) })} message={t('empty.confirm', { n: fmtNum(selected.size) })} confirmLabel={t('common.delete')} onConfirm={remove} onCancel={() => setConfirm(false)} />
+      )}
     </div>
   )
 }

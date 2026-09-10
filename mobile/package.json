@@ -1,7 +1,7 @@
 {
   "name": "cleanshelf-mobile",
   "productName": "CleanShelf",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "نسخة أندرويد من CleanShelf: تنظيف الجهاز، إدارة التطبيقات والملفات، وتحرير وسوم الأغاني",
   "author": {
     "name": "Alcode",
@@ -24,6 +24,7 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/status-bar": "^8.0.3",
     "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

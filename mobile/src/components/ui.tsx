@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ScanProgress } from '../lib/types'
+import { t } from '../lib/i18n'
 import { Icon, type IconName } from './Icon'
 
-/* مكوّنات واجهة صغيرة مشتركة بين الصفحات */
+/* مكوّنات الواجهة المشتركة بنمط التصميم الجديد */
 
 export function Check({ on }: { on: boolean }): JSX.Element {
   return (
     <span className={`check ${on ? 'on' : ''}`}>
-      <Icon name="check" size={14} strokeWidth={3} />
+      <Icon name="check" size={14} strokeWidth={3.2} />
     </span>
   )
 }
@@ -16,27 +17,33 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} className={`switch ${checked ? 'on' : ''}`} onClick={() => onChange(!checked)} />
 }
 
-export function EmptyState({ icon, tone, text }: { icon: IconName; tone?: string; text: string }): JSX.Element {
+export function Ico({ name, tone, size = 'md' }: { name: IconName; tone?: string; size?: 'sm' | 'md' | 'lg' }): JSX.Element {
   return (
-    <div className="empty-state">
-      <div className={`tile-icon ${tone ?? ''}`}>
-        <Icon name={icon} size={28} />
-      </div>
+    <span className={`ico ${size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : ''} ${tone ?? 'tone-ink'}`}>
+      <Icon name={name} size={size === 'sm' ? 16 : size === 'lg' ? 26 : 19} />
+    </span>
+  )
+}
+
+export function EmptyState({ icon, tone, text, action }: { icon: IconName; tone?: string; text: string; action?: React.ReactNode }): JSX.Element {
+  return (
+    <div className="empty">
+      <Ico name={icon} tone={tone} size="lg" />
       <div>{text}</div>
+      {action}
     </div>
   )
 }
 
 export function Notice({ kind = 'info', icon, children }: { kind?: 'info' | 'warn'; icon?: IconName; children: React.ReactNode }): JSX.Element {
   return (
-    <div className={`notice notice-${kind}`}>
-      <Icon name={icon ?? (kind === 'warn' ? 'alert' : 'info')} size={17} />
-      <div style={{ flex: 1 }}>{children}</div>
+    <div className={`notice ${kind === 'warn' ? 'notice-warn' : ''}`}>
+      <Icon name={icon ?? (kind === 'warn' ? 'alert' : 'info')} size={18} />
+      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
   )
 }
 
-/** ورقة سفلية — بديل النوافذ المنبثقة على الهاتف */
 export function Sheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }): JSX.Element {
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -50,7 +57,7 @@ export function Sheet({ onClose, children }: { onClose: () => void; children: Re
 export function ConfirmSheet({
   title,
   message,
-  confirmLabel = 'تأكيد',
+  confirmLabel,
   danger,
   onConfirm,
   onCancel,
@@ -70,14 +77,14 @@ export function ConfirmSheet({
       {message && <p>{message}</p>}
       {children}
       <div className="actions">
-        <button className="btn" onClick={onCancel}>إلغاء</button>
-        <button className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>{confirmLabel}</button>
+        <button className="btn" onClick={onCancel}>{t('common.cancel')}</button>
+        <button className={`btn ${danger ? 'btn-danger' : 'btn-dark'}`} onClick={onConfirm}>{confirmLabel ?? t('common.confirm')}</button>
       </div>
     </Sheet>
   )
 }
 
-export function InputSheet({ title, initialValue, confirmLabel = 'تأكيد', onConfirm, onCancel }: { title: string; initialValue: string; confirmLabel?: string; onConfirm: (v: string) => void; onCancel: () => void }): JSX.Element {
+export function InputSheet({ title, initialValue, confirmLabel, onConfirm, onCancel }: { title: string; initialValue: string; confirmLabel?: string; onConfirm: (v: string) => void; onCancel: () => void }): JSX.Element {
   const [value, setValue] = useState(initialValue)
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -89,33 +96,33 @@ export function InputSheet({ title, initialValue, confirmLabel = 'تأكيد', o
       <h3>{title}</h3>
       <input ref={ref} type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && value.trim() && onConfirm(value.trim())} />
       <div className="actions">
-        <button className="btn" onClick={onCancel}>إلغاء</button>
-        <button className="btn btn-primary" disabled={!value.trim()} onClick={() => onConfirm(value.trim())}>{confirmLabel}</button>
+        <button className="btn" onClick={onCancel}>{t('common.cancel')}</button>
+        <button className="btn btn-dark" disabled={!value.trim()} onClick={() => onConfirm(value.trim())}>{confirmLabel ?? t('common.confirm')}</button>
       </div>
     </Sheet>
   )
 }
 
 export function ProgressPanel({ progress, label, onCancel }: { progress: ScanProgress | null; label?: string; onCancel?: () => void }): JSX.Element {
-  const percent = progress && progress.total > 0 ? Math.min(100, Math.round((progress.processed / progress.total) * 100)) : null
+  const pct = progress && progress.total > 0 ? Math.min(100, Math.round((progress.processed / progress.total) * 100)) : null
+  const headline =
+    label ??
+    (progress?.phase === 'hashing'
+      ? `${t('common.scanning')} ${progress.processed}/${progress.total}`
+      : progress?.phase === 'shredding'
+        ? t('shred.progress', { i: progress.processed + 1, n: progress.total })
+        : `${t('common.scanning')} ${(progress?.filesSeen ?? 0).toLocaleString('en-US')}`)
   return (
     <div className="card card-pad">
-      <div className="toolbar" style={{ marginBottom: 10 }}>
-        <strong style={{ fontSize: 14 }}>
-          {label ??
-            (progress?.phase === 'hashing'
-              ? `مقارنة المحتوى… ${progress.processed} من ${progress.total}`
-              : progress?.phase === 'shredding'
-                ? `تمزيق… ${progress.processed + 1} من ${progress.total}`
-                : `جارٍ الفحص… ${(progress?.filesSeen ?? 0).toLocaleString('ar')} ملف`)}
-        </strong>
+      <div className="toolbar" style={{ marginBottom: 12 }}>
+        <strong style={{ fontSize: 14 }}>{headline}</strong>
         <div className="spacer" />
-        {onCancel && <button className="btn btn-sm" onClick={onCancel}>إيقاف</button>}
+        {onCancel && <button className="btn btn-sm" onClick={onCancel}>{t('common.stop')}</button>}
       </div>
-      <div className={`progress-bar ${percent === null ? 'indeterminate' : ''}`}>
-        <div style={{ width: percent === null ? '100%' : `${percent}%` }} />
+      <div className={`bar warm ${pct === null ? 'indeterminate' : ''}`}>
+        <div style={{ width: pct === null ? '40%' : `${pct}%` }} />
       </div>
-      <div className="muted mono" style={{ marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{progress?.currentPath ?? ''}</div>
+      <div className="muted mono" style={{ marginTop: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{progress?.currentPath ?? ''}</div>
     </div>
   )
 }
@@ -132,41 +139,69 @@ export function fileIcon(isDirectory: boolean, ext: string): IconName {
   return 'file'
 }
 
-const RADIUS = 62
-const CIRC = 2 * Math.PI * RADIUS
-
-export function healthTone(score: number): string {
-  if (score >= 80) return 'var(--success)'
-  if (score >= 60) return 'var(--warning)'
-  return 'var(--danger)'
-}
-
-export function HealthRing({ score, caption }: { score: number | null; caption?: string }): JSX.Element {
+/** حلقة درجة الصحة بلون متدرّج حسب الدرجة. */
+export function ScoreRing({ score, caption, color }: { score: number | null; caption: string; color: string }): JSX.Element {
   const [shown, setShown] = useState(0)
   useEffect(() => {
     if (score === null) {
       setShown(0)
       return
     }
-    const t = setTimeout(() => setShown(score), 60)
-    return () => clearTimeout(t)
+    const t2 = setTimeout(() => setShown(score), 80)
+    return () => clearTimeout(t2)
   }, [score])
-  const tone = score === null ? 'var(--text-faint)' : healthTone(score)
+  const R = 56
+  const C = 2 * Math.PI * R
   return (
-    <div className="health-ring" style={{ ['--tone' as string]: tone }}>
-      <svg width="150" height="150" viewBox="0 0 150 150">
-        <circle className="track" cx="75" cy="75" r={RADIUS} fill="none" strokeWidth="11" />
-        <circle className="fill" cx="75" cy="75" r={RADIUS} fill="none" strokeWidth="11" strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - shown / 100)} />
+    <div className="score-ring">
+      <svg width="132" height="132" viewBox="0 0 132 132">
+        <circle className="track" cx="66" cy="66" r={R} fill="none" strokeWidth="11" />
+        <circle className="fill" cx="66" cy="66" r={R} fill="none" strokeWidth="11" stroke={color} strokeDasharray={C} strokeDashoffset={C * (1 - shown / 100)} />
       </svg>
       <div className="center">
-        {score === null ? <div className="skeleton" style={{ width: 52, height: 34 }} /> : <div className="score" style={{ color: tone }}>{score}</div>}
-        <div className="caption">{caption ?? 'من 100'}</div>
+        {score === null ? <div className="skeleton" style={{ width: 48, height: 34 }} /> : <div className="n" style={{ color }}>{score}</div>}
+        <div className="l">{caption}</div>
       </div>
     </div>
   )
 }
 
-export function useScanProgress(): [ScanProgress | null, (p: ScanProgress | null) => void] {
-  const [progress, setProgress] = useState<ScanProgress | null>(null)
-  return [progress, setProgress]
+/** بطاقة عنصر في الشبكة — بنفس شكل شاشة العناصر في التصميم. */
+export function ItemCard({
+  selected,
+  onToggle,
+  tag,
+  name,
+  meta,
+  pill,
+  thumb,
+  icon,
+  tone,
+  index = 0
+}: {
+  selected: boolean
+  onToggle: () => void
+  tag: string
+  name: string
+  meta: string
+  pill?: string
+  thumb?: string
+  icon?: IconName
+  tone?: string
+  index?: number
+}): JSX.Element {
+  return (
+    <div className={`item-card ${selected ? 'on' : ''}`} style={{ animationDelay: `${Math.min(index, 10) * 35}ms` }} onClick={onToggle}>
+      <div className="top">
+        <Check on={selected} />
+        <span className="tag">{tag}</span>
+      </div>
+      <div className="thumb">
+        {thumb ? <img src={thumb} alt="" loading="lazy" /> : <Icon name={icon ?? 'file'} size={40} strokeWidth={1.4} className={tone} />}
+      </div>
+      <div className="name">{name}</div>
+      <div className="meta">{meta}</div>
+      {pill && <span className="pill-green">{pill}</span>}
+    </div>
+  )
 }
