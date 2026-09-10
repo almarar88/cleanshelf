@@ -16,14 +16,14 @@ export interface PlanTaskDef {
 }
 
 export const PLAN_TASKS: PlanTaskDef[] = [
-  { id: 'junk', label: 'تنظيف الملفات غير الضرورية', page: 'cleaner', icon: 'sparkles', tone: 'tone-yellow', everyDays: 7 },
-  { id: 'privacy', label: 'مسح بيانات التصفح', page: 'privacy', icon: 'eyeOff', tone: 'tone-violet', everyDays: 14 },
-  { id: 'downloads', label: 'ترتيب مجلد التنزيلات', page: 'downloads', icon: 'download', tone: 'tone-blue', everyDays: 30 },
-  { id: 'duplicates', label: 'إزالة الملفات المكرّرة', page: 'duplicates', icon: 'copy', tone: 'tone-pink', everyDays: 60 },
-  { id: 'largefiles', label: 'مراجعة أكبر الملفات', page: 'largefiles', icon: 'package', tone: 'tone-orange', everyDays: 60 },
-  { id: 'startup', label: 'مراجعة برامج بدء التشغيل', page: 'startup', icon: 'rocket', tone: 'tone-teal', everyDays: 90 },
-  { id: 'uninstaller', label: 'إزالة البرامج غير المستخدمة', page: 'uninstaller', icon: 'trash', tone: 'tone-red', everyDays: 90 },
-  { id: 'extras', label: 'حذف المجلدات الفارغة والاختصارات المعطوبة', page: 'extras', icon: 'link', tone: 'tone-green', everyDays: 60 }
+  { id: 'junk', label: 'plan.task.junk', page: 'cleaner', icon: 'sparkles', tone: 'tone-yellow', everyDays: 7 },
+  { id: 'privacy', label: 'plan.task.privacy', page: 'privacy', icon: 'eyeOff', tone: 'tone-violet', everyDays: 14 },
+  { id: 'downloads', label: 'plan.task.downloads', page: 'downloads', icon: 'download', tone: 'tone-blue', everyDays: 30 },
+  { id: 'duplicates', label: 'plan.task.duplicates', page: 'duplicates', icon: 'copy', tone: 'tone-pink', everyDays: 60 },
+  { id: 'largefiles', label: 'plan.task.largefiles', page: 'largefiles', icon: 'package', tone: 'tone-orange', everyDays: 60 },
+  { id: 'startup', label: 'plan.task.startup', page: 'startup', icon: 'rocket', tone: 'tone-teal', everyDays: 90 },
+  { id: 'uninstaller', label: 'plan.task.uninstaller', page: 'uninstaller', icon: 'trash', tone: 'tone-red', everyDays: 90 },
+  { id: 'extras', label: 'plan.task.extras', page: 'extras', icon: 'link', tone: 'tone-green', everyDays: 60 }
 ]
 
 const KEY = 'cleanshelf.plan'

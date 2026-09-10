@@ -4,8 +4,9 @@ import { app } from 'electron'
 import type { AppSettings } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  lang: 'ar',
   theme: 'system',
-  accentHue: 216,
+  accentHue: 45,
   minimizeToTray: false,
   launchAtLogin: false,
   notifications: true,
@@ -23,6 +24,7 @@ function settingsPath(): string {
 function sanitize(raw: unknown): AppSettings {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const out: AppSettings = { ...DEFAULT_SETTINGS }
+  if (obj.lang === 'ar' || obj.lang === 'en') out.lang = obj.lang
   if (obj.theme === 'light' || obj.theme === 'dark' || obj.theme === 'system') out.theme = obj.theme
   if (typeof obj.accentHue === 'number' && obj.accentHue >= 0 && obj.accentHue <= 360)
     out.accentHue = obj.accentHue

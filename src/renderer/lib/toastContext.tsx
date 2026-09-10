@@ -17,8 +17,8 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 function inferKind(message: string): ToastKind {
-  if (/فشل|تعذّر|تعذر|خطأ|غير متاح|أُلغي/.test(message)) return 'error'
-  if (/^تم|نجح|حُذف|أُنشئ|حُفظ|تحرير/.test(message)) return 'success'
+  if (/فشل|تعذّر|تعذر|خطأ|غير متاح|أُلغي|failed|error|could not|unable/i.test(message)) return 'error'
+  if (/^تم|نجح|حُذف|أُنشئ|حُفظ|تحرير|freed|saved|done|renamed|cleared|removed|marked/i.test(message)) return 'success'
   return 'info'
 }
 

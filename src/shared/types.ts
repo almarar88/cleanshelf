@@ -240,6 +240,8 @@ export type ProgressListener<T> = (payload: T) => void
 // ---------- الإعدادات ----------
 
 export interface AppSettings {
+  /** لغة الواجهة — تضبط أيضًا اتجاه الصفحة */
+  lang: 'ar' | 'en'
   theme: 'system' | 'light' | 'dark'
   /** صبغة لون التمييز بدرجات HSL */
   accentHue: number

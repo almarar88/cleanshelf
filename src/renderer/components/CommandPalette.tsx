@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, type IconName } from './Icon'
+import { t } from '../lib/i18n'
 
 export interface PaletteItem {
   id: string
@@ -95,14 +96,14 @@ export function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث عن صفحة أو إجراء…"
+            placeholder={t('palette.placeholder')}
             spellCheck={false}
           />
           <span className="kbd">Esc</span>
         </div>
         <div className="palette-list" ref={listRef}>
           {results.length === 0 ? (
-            <div className="palette-empty">لا نتائج لـ "{query}"</div>
+            <div className="palette-empty">{t('palette.empty', { q: query })}</div>
           ) : (
             groups.map((g) => (
               <div key={g.name}>
@@ -131,13 +132,13 @@ export function CommandPalette({
         </div>
         <div className="palette-footer">
           <span>
-            <span className="kbd">↑↓</span> تنقّل
+            <span className="kbd">↑↓</span> {t('palette.kMove')}
           </span>
           <span>
-            <span className="kbd">↵</span> فتح
+            <span className="kbd">↵</span> {t('palette.kOpen')}
           </span>
           <span>
-            <span className="kbd">Esc</span> إغلاق
+            <span className="kbd">Esc</span> {t('palette.kClose')}
           </span>
         </div>
       </div>

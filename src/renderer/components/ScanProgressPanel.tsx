@@ -1,4 +1,6 @@
 import type { ScanProgress } from '../../shared/types'
+import { t } from '../lib/i18n'
+import { fmtNum } from '../lib/format'
 
 export function ScanProgressPanel({
   progress,
@@ -17,12 +19,12 @@ export function ScanProgressPanel({
       <div className="toolbar" style={{ marginBottom: 12 }}>
         <strong>
           {progress?.phase === 'hashing'
-            ? `مقارنة محتوى الملفات… ${progress.processed} من ${progress.total}`
-            : `جارٍ فحص المجلدات… ${progress?.filesSeen?.toLocaleString('ar') ?? 0} ملف`}
+            ? t('scan.hashing', { i: progress.processed, n: progress.total })
+            : t('scan.walking', { n: fmtNum(progress?.filesSeen ?? 0) })}
         </strong>
         <div className="spacer" />
         <button className="btn btn-sm" onClick={onCancel}>
-          إيقاف الفحص
+          {t('common.stopScan')}
         </button>
       </div>
 

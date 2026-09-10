@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { AppInfo, PlatformInfo } from '../../shared/types'
-import { PAGE_META, type PageId } from '../lib/pages'
+import { PAGE_META, pageTitle, type PageId } from '../lib/pages'
+import { t } from '../lib/i18n'
 import { Icon, type IconName } from './Icon'
 
 export interface NavItem {
   id: PageId
-  label: string
   icon: IconName
   keywords?: string
 }
 
 function item(id: PageId, keywords: string): NavItem {
-  return { id, label: PAGE_META[id].title, icon: PAGE_META[id].icon, keywords }
+  return { id, icon: PAGE_META[id].icon, keywords }
 }
 
 export const MAIN_ITEMS: NavItem[] = [
@@ -79,11 +79,11 @@ export function Sidebar({
       onKeyDown={(e) => e.key === 'Enter' && onNavigate(item.id)}
     >
       <Icon name={item.icon} size={17} />
-      <span>{item.label}</span>
+      <span>{pageTitle(item.id)}</span>
       {showPin && item.id !== 'dashboard' && (
         <button
           className={`star ${pinned.includes(item.id) ? 'on' : ''}`}
-          title={pinned.includes(item.id) ? 'إلغاء التثبيت' : 'تثبيت في الرئيسية'}
+          title={t(pinned.includes(item.id) ? 'nav.unpin' : 'nav.pin')}
           onClick={(e) => {
             e.stopPropagation()
             onTogglePin(item.id)
@@ -102,27 +102,27 @@ export function Sidebar({
           <Icon name="logo" size={19} strokeWidth={2} />
         </div>
         <div>
-          CleanShelf
-          <small>by Alcode</small>
+          {t('app.name')}
+          <small>{t('app.by')}</small>
         </div>
       </div>
 
       {MAIN_ITEMS.map((i) => render(i))}
 
-      <div className="nav-section-label">أدوات القرص</div>
+      <div className="nav-section-label">{t('nav.disk')}</div>
       {DISK_ITEMS.map((i) => render(i))}
 
-      <div className="nav-section-label">الخصوصية والأمان</div>
+      <div className="nav-section-label">{t('nav.privacy')}</div>
       {PRIVACY_ITEMS.map((i) => render(i))}
 
-      <div className="nav-section-label">النظام</div>
+      <div className="nav-section-label">{t('nav.system')}</div>
       {(platform?.isMac ? [MAC_ITEM, ...SYSTEM_ITEMS] : SYSTEM_ITEMS).map((i) => render(i))}
 
       <div style={{ marginTop: 14 }}>{render(SETTINGS_ITEM, false)}</div>
 
       <div className="sidebar-footer">
-        <div>{info ? `${info.name} ${info.version}` : 'CleanShelf'}</div>
-        <div className="company">من تطوير {info?.company ?? 'Alcode'}</div>
+        <div>{info ? `${info.name} ${info.version}` : t('app.name')}</div>
+        <div className="company">{t('app.byShort', { company: info?.company ?? 'Alcode' })}</div>
       </div>
     </aside>
   )

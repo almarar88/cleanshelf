@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useToast } from '../lib/toastContext'
 import { basename } from '../lib/pathUtils'
+import { t } from '../lib/i18n'
 
 interface Plan {
   from: string
@@ -33,12 +34,12 @@ export function BatchRenameModal({
       const { applied, failed } = await window.api.fm.batchRenameApply(plan)
       showToast(
         failed.length
-          ? `تمت إعادة تسمية ${applied.length} ملف، وتعذّر ${failed.length} (${failed[0].error})`
-          : `تمت إعادة تسمية ${applied.length} ملف`
+          ? t('batch.partial', { n: applied.length, fail: failed.length, msg: failed[0].error ?? '' })
+          : t('batch.done', { n: applied.length })
       )
       onDone()
     } catch (err) {
-      showToast('فشل بعض العمليات: ' + (err as Error).message)
+      showToast(t('batch.failed', { msg: (err as Error).message }))
     } finally {
       setApplying(false)
     }
@@ -47,9 +48,9 @@ export function BatchRenameModal({
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={{ width: 620 }} onClick={(e) => e.stopPropagation()}>
-        <h3>إعادة تسمية دفعية ({files.length} ملف)</h3>
+        <h3>{t('batch.title', { n: files.length })}</h3>
         <p className="muted" style={{ fontSize: 12.5 }}>
-          استخدم %name% للاسم الأصلي، %n% للترقيم التسلسلي، %ext% للامتداد
+          {t('batch.hint')}
         </p>
         <div className="toolbar" style={{ marginBottom: 12 }}>
           <input
@@ -63,7 +64,7 @@ export function BatchRenameModal({
             value={startNumber}
             onChange={(e) => setStartNumber(Number(e.target.value))}
             style={{ width: 90 }}
-            title="رقم البداية"
+            title={t('batch.start')}
           />
         </div>
         <div className="scroll-list" style={{ maxHeight: 260 }}>
@@ -76,10 +77,10 @@ export function BatchRenameModal({
         <div className="toolbar" style={{ marginTop: 16, marginBottom: 0 }}>
           <div className="spacer" />
           <button className="btn" onClick={onClose}>
-            إلغاء
+            {t('common.cancel')}
           </button>
           <button className="btn btn-primary" disabled={applying} onClick={apply}>
-            {applying ? 'جارٍ التنفيذ…' : 'تطبيق'}
+            {applying ? t('batch.applying') : t('common.apply')}
           </button>
         </div>
       </div>

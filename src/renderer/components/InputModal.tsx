@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { t } from '../lib/i18n'
 
 /**
  * حوار إدخال نصي — بديل عن window.prompt الذي لا تدعمه Electron إطلاقًا.
@@ -6,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 export function InputModal({
   title,
   initialValue,
-  confirmLabel = 'تأكيد',
+  confirmLabel,
   onConfirm,
   onCancel
 }: {
@@ -48,10 +49,10 @@ export function InputModal({
         <div className="toolbar" style={{ marginTop: 16, marginBottom: 0 }}>
           <div className="spacer" />
           <button className="btn" onClick={onCancel}>
-            إلغاء
+            {t('common.cancel')}
           </button>
           <button className="btn btn-primary" onClick={submit} disabled={!value.trim()}>
-            {confirmLabel}
+            {confirmLabel ?? t('common.confirm')}
           </button>
         </div>
       </div>

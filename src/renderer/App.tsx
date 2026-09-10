@@ -26,7 +26,8 @@ import { Report } from './pages/Report'
 import { Settings } from './pages/Settings'
 import { Overview } from './pages/Overview'
 import { Plan } from './pages/Plan'
-import { PAGE_META, type PageId as Page } from './lib/pages'
+import { PAGE_META, pageSub, pageTitle, type PageId as Page } from './lib/pages'
+import { I18nProvider, t, useI18n, type Lang } from './lib/i18n'
 import { loadPinned, togglePinned } from './lib/pinned'
 import { ToastProvider, useToast } from './lib/toastContext'
 import { applyAccent, applyTheme, loadAccent, loadTheme, nextTheme, THEME_ICON, THEME_LABEL, type ThemeMode } from './lib/theme'
@@ -36,6 +37,7 @@ export type { PageId } from './lib/pages'
 
 function AppInner(): JSX.Element {
   const { showToast } = useToast()
+  const { lang, setLang } = useI18n()
   const [page, setPage] = useState<Page>('dashboard')
   const [theme, setTheme] = useState<ThemeMode>(loadTheme)
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -58,6 +60,7 @@ function AppInner(): JSX.Element {
         setSettings(s)
         setTheme(s.theme)
         applyAccent(s.accentHue)
+        if (s.lang && s.lang !== lang) setLang(s.lang)
       })
       .catch(() => setSettings(null))
     window.api.platform.info().then((p) => setIsMac(p.isMac)).catch(() => setIsMac(false))
@@ -75,11 +78,17 @@ function AppInner(): JSX.Element {
         if (patch.theme) setTheme(next.theme)
         if (patch.accentHue !== undefined) applyAccent(next.accentHue)
       } catch (err) {
-        showToast('تعذّر حفظ الإعداد: ' + (err as Error).message)
+        showToast(t('set.saveFailed', { msg: (err as Error).message }))
       }
     },
     [showToast]
   )
+
+  const toggleLang = useCallback(() => {
+    const next: Lang = lang === 'ar' ? 'en' : 'ar'
+    setLang(next)
+    updateSettings({ lang: next })
+  }, [lang, setLang, updateSettings])
 
   const cycleTheme = useCallback(() => {
     const next = nextTheme(theme)
@@ -122,18 +131,18 @@ function AppInner(): JSX.Element {
     const nav = [...MAIN_ITEMS, ...DISK_ITEMS, ...PRIVACY_ITEMS, ...(isMac ? [MAC_ITEM] : []), ...SYSTEM_ITEMS, SETTINGS_ITEM]
     const pages: PaletteItem[] = nav.map((n) => ({
       id: `page:${n.id}`,
-      label: n.label,
-      group: 'الصفحات',
+      label: pageTitle(n.id),
+      group: t('palette.pages'),
       icon: n.icon,
       keywords: n.keywords,
-      hint: PAGE_META[n.id].sub,
+      hint: pageSub(n.id),
       action: () => setPage(n.id)
     }))
     const actions: PaletteItem[] = [
       {
         id: 'act:smartClean',
-        label: 'تنظيف ذكي الآن',
-        group: 'إجراءات',
+        label: t('palette.smartClean'),
+        group: t('palette.actions'),
         icon: 'sparkles',
         tone: 'tone-green',
         keywords: 'smart clean quick',
@@ -144,8 +153,8 @@ function AppInner(): JSX.Element {
       },
       {
         id: 'act:theme',
-        label: `تبديل المظهر (الحالي: ${THEME_LABEL[theme]})`,
-        group: 'إجراءات',
+        label: t('palette.theme', { mode: t(THEME_LABEL[theme]) }),
+        group: t('palette.actions'),
         icon: THEME_ICON[theme],
         tone: 'tone-amber',
         keywords: 'theme dark light مظهر داكن فاتح',
@@ -153,9 +162,18 @@ function AppInner(): JSX.Element {
         action: cycleTheme
       },
       {
+        id: 'act:lang',
+        label: t('palette.lang', { lang: lang === 'ar' ? t('set.arabic') : t('set.english') }),
+        group: t('palette.actions'),
+        icon: 'globe',
+        tone: 'tone-blue',
+        keywords: 'language lang arabic english لغة عربي إنجليزي',
+        action: toggleLang
+      },
+      {
         id: 'act:report',
-        label: 'إنشاء تقرير عن الجهاز',
-        group: 'إجراءات',
+        label: t('palette.report'),
+        group: t('palette.actions'),
         icon: 'fileText',
         tone: 'tone-teal',
         keywords: 'report export',
@@ -163,7 +181,7 @@ function AppInner(): JSX.Element {
       }
     ]
     return [...actions, ...pages]
-  }, [isMac, theme, cycleTheme])
+  }, [isMac, theme, cycleTheme, lang, toggleLang])
 
   const onCommandHandled = useCallback(() => setCommand(null), [])
 
@@ -233,19 +251,22 @@ function AppInner(): JSX.Element {
       <div className="main-area">
         <div className="topbar">
           <div>
-            <h1>{meta.title}</h1>
-            <div className="sub">{meta.sub}</div>
+            <h1>{t(meta.title)}</h1>
+            <div className="sub">{t(meta.sub)}</div>
           </div>
           <div className="topbar-actions">
-            <button className="search-trigger" onClick={() => setPaletteOpen(true)} title="ابحث عن صفحة أو إجراء">
+            <button className="search-trigger" onClick={() => setPaletteOpen(true)} title={t('palette.placeholder')}>
               <Icon name="search" size={15} />
-              <span>بحث سريع…</span>
+              <span>{t('common.searchQuick')}</span>
               <span className="kbd">{isMac ? '⌘K' : 'Ctrl K'}</span>
             </button>
-            <button className="btn btn-icon" onClick={cycleTheme} title={`المظهر: ${THEME_LABEL[theme]} — اضغط للتبديل`}>
+            <button className="btn btn-icon" onClick={toggleLang} title={t('set.language')}>
+              <span style={{ fontSize: 12.5, fontWeight: 800 }}>{lang === 'ar' ? 'EN' : 'ع'}</span>
+            </button>
+            <button className="btn btn-icon" onClick={cycleTheme} title={t('theme.tip', { mode: t(THEME_LABEL[theme]) })}>
               <Icon name={THEME_ICON[theme]} size={17} />
             </button>
-            <button className={`btn btn-icon ${page === 'settings' ? 'btn-primary' : ''}`} onClick={() => setPage('settings')} title="الإعدادات">
+            <button className={`btn btn-icon ${page === 'settings' ? 'btn-primary' : ''}`} onClick={() => setPage('settings')} title={t('common.settings')}>
               <Icon name="cog" size={17} />
             </button>
           </div>
@@ -260,10 +281,18 @@ function AppInner(): JSX.Element {
   )
 }
 
+function AppWithLang(): JSX.Element {
+  const { lang } = useI18n()
+  // المفتاح يعيد بناء الشجرة عند تبديل اللغة فتُقرأ كل النصوص من جديد
+  return <AppInner key={lang} />
+}
+
 export function App(): JSX.Element {
   return (
-    <ToastProvider>
-      <AppInner />
-    </ToastProvider>
+    <I18nProvider>
+      <ToastProvider>
+        <AppWithLang />
+      </ToastProvider>
+    </I18nProvider>
   )
 }

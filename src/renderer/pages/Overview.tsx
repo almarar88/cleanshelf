@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { HealthReport, SystemSummary } from '../../shared/types'
-import { formatBytes, splitBytes } from '../lib/format'
+import { fmtNum, formatBytes, splitBytes } from '../lib/format'
+import { t } from '../lib/i18n'
 import { forecastDays, loadTrend, recordTrend, type TrendPoint } from '../lib/trend'
 import { planSummary } from '../lib/plan'
 import { Icon } from '../components/Icon'
 import { EmptyState, Ico } from '../components/ui'
-import { PAGE_META, type PageId } from '../lib/pages'
+import { PAGE_META, pageTitle, type PageId } from '../lib/pages'
 
 interface Opportunity {
   id: PageId
@@ -46,26 +47,26 @@ export function Overview({ onNavigate }: { onNavigate: (id: PageId) => void }): 
 
   const headline =
     freePct === null
-      ? 'نقيس مساحة قرصك…'
+      ? t('ov.measuring')
       : freePct < 10
-        ? 'قرصك على وشك الامتلاء'
+        ? t('ov.almostFull')
         : freePct < 25
-          ? 'مساحة قرصك تتناقص'
-          : 'مساحة قرصك بحالة جيدة'
+          ? t('ov.shrinking')
+          : t('ov.healthy')
 
   const opportunities: Opportunity[] = []
   if (health && health.cleanableBytes > 0) {
     opportunities.push({
       id: 'cleaner',
-      title: PAGE_META.cleaner.title,
-      detail: `${formatBytes(health.cleanableBytes)} من الملفات المؤقتة والذواكر`,
+      title: pageTitle('cleaner'),
+      detail: t('ov.junkDetail', { size: formatBytes(health.cleanableBytes) }),
       bytes: health.cleanableBytes
     })
   }
   opportunities.push(
-    { id: 'duplicates', title: PAGE_META.duplicates.title, detail: 'نسخ متطابقة تهدر المساحة بلا فائدة', bytes: 0 },
-    { id: 'largefiles', title: PAGE_META.largefiles.title, detail: 'أكبر الملفات المستهلكة للمساحة', bytes: 0 },
-    { id: 'downloads', title: PAGE_META.downloads.title, detail: 'ما نسيته في مجلد التنزيلات منذ شهور', bytes: 0 }
+    { id: 'duplicates', title: pageTitle('duplicates'), detail: t('ov.dupDetail'), bytes: 0 },
+    { id: 'largefiles', title: pageTitle('largefiles'), detail: t('ov.largeDetail'), bytes: 0 },
+    { id: 'downloads', title: pageTitle('downloads'), detail: t('ov.dlDetail'), bytes: 0 }
   )
   const top = opportunities[0]
   const rest = opportunities.slice(1)
@@ -91,7 +92,7 @@ export function Overview({ onNavigate }: { onNavigate: (id: PageId) => void }): 
 
       <div className="grid grid-3" style={{ marginBottom: 16 }}>
         <div className="card card-pad">
-          <div className="card-sub">المساحة المتاحة</div>
+          <div className="card-sub">{t('ov.freeSpace')}</div>
           <div className="display sm" style={{ margin: '4px 0 0' }}>
             {freeSplit.value}
             <small>{freeSplit.unit}</small>
@@ -103,25 +104,25 @@ export function Overview({ onNavigate }: { onNavigate: (id: PageId) => void }): 
           )}
         </div>
         <div className="card card-pad">
-          <div className="card-sub">يُستهلك يوميًا</div>
+          <div className="card-sub">{t('ov.perDay')}</div>
           <div className="display sm" style={{ margin: '4px 0 0' }}>
             {forecast.perDay > 0 ? splitBytes(forecast.perDay).value : '—'}
             {forecast.perDay > 0 && <small>{splitBytes(forecast.perDay).unit}</small>}
           </div>
           <div className="card-sub" style={{ marginTop: 10, whiteSpace: 'normal' }}>
-            {forecast.perDay > 0 ? 'متوسط ما تستهلكه مساحتك كل يوم' : 'نحتاج بضعة أيام من القياسات'}
+            {forecast.perDay > 0 ? t('ov.perDayDesc') : t('ov.needDays')}
           </div>
         </div>
         <div className="card card-pad">
-          <div className="card-sub">توقّع امتلاء القرص</div>
+          <div className="card-sub">{t('ov.forecast')}</div>
           <div className="display sm" style={{ margin: '4px 0 0' }}>
-            {forecast.days === null ? '—' : forecast.days}
-            {forecast.days !== null && <small>يوم</small>}
+            {forecast.days === null ? '—' : fmtNum(forecast.days)}
+            {forecast.days !== null && <small>{t('common.days')}</small>}
           </div>
           <div className="card-sub" style={{ marginTop: 10, whiteSpace: 'normal' }}>
             {forecast.days === null
-              ? 'يُحسب من قياسات الأيام السابقة'
-              : `بهذا المعدّل يمتلئ القرص بعد نحو ${forecast.days} يومًا`}
+              ? t('ov.forecastDesc')
+              : t('ov.forecastIn', { n: fmtNum(forecast.days) })}
           </div>
         </div>
       </div>
@@ -130,17 +131,17 @@ export function Overview({ onNavigate }: { onNavigate: (id: PageId) => void }): 
         <div className="card card-pad"><div className="skeleton" style={{ height: 120 }} /></div>
       ) : (
         <>
-          <div className="section-title">أكبر فرصة تنظيف</div>
+          <div className="section-title">{t('ov.biggest')}</div>
           <section className="tile dark" style={{ marginBottom: 16 }} onClick={() => onNavigate(top.id)}>
             <div className="tile-head">
-              <span className="badge badge-yellow"><Icon name="trendUp" size={14} /> أثر كبير</span>
+              <span className="badge badge-yellow"><Icon name="trendUp" size={14} /> {t('ov.highImpact')}</span>
               <span className="tile-btn" style={{ marginInlineStart: 'auto' }}><Icon name={PAGE_META[top.id].icon} size={17} /></span>
             </div>
             <h2 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', margin: '18px 0 6px' }}>{top.title}</h2>
             <div style={{ fontSize: 14, opacity: 0.72, fontWeight: 600 }}>{top.detail}</div>
             <div style={{ display: 'flex', gap: 12, marginTop: 22, alignItems: 'center' }}>
               <button className="btn" style={{ background: 'transparent', color: '#fff', borderColor: 'rgba(255,255,255,0.25)' }} onClick={() => onNavigate(top.id)}>
-                عرض التفاصيل <Icon name="arrowRight" size={16} className="flip-rtl" />
+                {t('common.viewDetails')} <Icon name="arrowRight" size={16} className="flip-rtl" />
               </button>
               <span className="fab" style={{ background: 'var(--yellow)', color: 'var(--ink)' }}>
                 <Icon name="sparkles" size={20} />
@@ -148,7 +149,7 @@ export function Overview({ onNavigate }: { onNavigate: (id: PageId) => void }): 
             </div>
           </section>
 
-          <div className="section-title">فرص أخرى</div>
+          <div className="section-title">{t('ov.others')}</div>
           <div className="card" style={{ marginBottom: 16 }}>
             {rest.map((o) => (
               <div key={o.id} className="row" onClick={() => onNavigate(o.id)}>
@@ -163,25 +164,25 @@ export function Overview({ onNavigate }: { onNavigate: (id: PageId) => void }): 
           </div>
 
           <div className="section-title">
-            مهام الخطة
-            <button className="more" onClick={() => onNavigate('plan')}>عرض الكل</button>
+            {t('ov.planTasks')}
+            <button className="more" onClick={() => onNavigate('plan')}>{t('common.viewAll')}</button>
           </div>
-          {plan.tasks.filter((t) => t.state !== 'done').length === 0 ? (
-            <EmptyState icon="checkCircle" tone="tone-green" text="كل مهام الخطة منجزة — جهازك في أفضل حال" />
+          {plan.tasks.filter((x) => x.state !== 'done').length === 0 ? (
+            <EmptyState icon="checkCircle" tone="tone-green" text={t('ov.allDone')} />
           ) : (
             <div className="card">
               {plan.tasks
-                .filter((t) => t.state !== 'done')
+                .filter((x) => x.state !== 'done')
                 .slice(0, 4)
-                .map((t) => (
-                  <div key={t.id} className="row" onClick={() => onNavigate(t.page)}>
-                    <Ico name={t.icon} tone={t.tone} size="sm" />
+                .map((task) => (
+                  <div key={task.id} className="row" onClick={() => onNavigate(task.page)}>
+                    <Ico name={task.icon} tone={task.tone} size="sm" />
                     <div className="text">
-                      <div className="title">{t.label}</div>
-                      <div className="desc">{t.daysAgo === null ? 'لم تُنفَّذ بعد' : `آخر مرة قبل ${t.daysAgo} يوم`} • كل {t.everyDays} يوم</div>
+                      <div className="title">{t(task.label)}</div>
+                      <div className="desc">{task.daysAgo === null ? t('plan.never') : t('plan.daysAgo', { n: fmtNum(task.daysAgo) })} • {t('plan.every', { n: fmtNum(task.everyDays) })}</div>
                     </div>
-                    <span className={`badge ${t.state === 'overdue' ? 'badge-danger' : 'badge-caution'}`}>
-                      {t.state === 'overdue' ? 'متأخرة' : 'مستحقة'}
+                    <span className={`badge ${task.state === 'overdue' ? 'badge-danger' : 'badge-caution'}`}>
+                      {t(task.state === 'overdue' ? 'plan.badge.overdue' : 'plan.badge.due')}
                     </span>
                   </div>
                 ))}
