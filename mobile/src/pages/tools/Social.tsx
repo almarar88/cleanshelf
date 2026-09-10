@@ -104,7 +104,7 @@ export function Social(): JSX.Element {
       {cats && cats.length > 0 && (
         <section className="tile orange">
           <div className="tile-head">
-            <h3>{t('page.social')}</h3>
+            <h3>{t('common.total')}</h3>
             <button className="tile-btn" onClick={() => { tap(); scan() }} disabled={scanning} aria-label={t('common.rescan')}><Icon name="refresh" size={17} /></button>
           </div>
           <div className="display sm" style={{ margin: '4px 0 2px' }}>

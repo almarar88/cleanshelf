@@ -105,14 +105,14 @@ export function Settings(): JSX.Element {
       <div className="card">
         <div className="row">
           <Ico name="shield" tone="tone-yellow" size="sm" />
-          <div className="text"><div className="title">{t('perm.allFiles.label')}</div><div className="desc">{t('perm.allFiles.sub')}</div></div>
+          <div className="text"><div className="title">{t('perm.allFiles.label')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('perm.allFiles.sub')}</div></div>
           {permissions.allFiles
             ? <span className="badge badge-safe"><Icon name="check" size={13} /> {t('common.granted')}</span>
             : <button className="btn btn-sm btn-dark" onClick={() => Native.requestAllFiles()}>{t('common.grant')}</button>}
         </div>
         <div className="row">
           <Ico name="clock" tone="tone-teal" size="sm" />
-          <div className="text"><div className="title">{t('perm.usage.label')}</div><div className="desc">{t('perm.usage.sub')}</div></div>
+          <div className="text"><div className="title">{t('perm.usage.label')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('perm.usage.sub')}</div></div>
           {permissions.usageStats
             ? <span className="badge badge-safe"><Icon name="check" size={13} /> {t('common.granted')}</span>
             : <button className="btn btn-sm" onClick={() => Native.requestUsageStats()}>{t('common.grant')}</button>}
@@ -122,15 +122,15 @@ export function Settings(): JSX.Element {
       <div className="section-title">{t('set.behavior')}</div>
       <div className="card">
         <div className="row">
-          <div className="text"><div className="title">{t('set.notif')}</div><div className="desc">{t('set.notif.sub')}</div></div>
+          <div className="text"><div className="title">{t('set.notif')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('set.notif.sub')}</div></div>
           <Switch checked={settings.notifications} onChange={toggleNotifications} label={t('set.notif')} />
         </div>
         <div className="row">
-          <div className="text"><div className="title">{t('set.autoscan')}</div><div className="desc">{t('set.autoscan.sub')}</div></div>
+          <div className="text"><div className="title">{t('set.autoscan')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('set.autoscan.sub')}</div></div>
           <Switch checked={settings.scanOnLaunch} onChange={(v) => updateSettings({ scanOnLaunch: v })} label={t('set.autoscan')} />
         </div>
         <div className="row">
-          <div className="text"><div className="title">{t('set.reminder')}</div><div className="desc">{t('set.reminder.sub')}</div></div>
+          <div className="text"><div className="title">{t('set.reminder')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('set.reminder.sub')}</div></div>
           <Switch checked={settings.reminderEnabled} onChange={(v) => setReminder({ enabled: v })} label={t('set.reminder')} />
         </div>
         {settings.reminderEnabled && (
@@ -145,7 +145,7 @@ export function Settings(): JSX.Element {
           </div>
         )}
         <div className="row">
-          <div className="text"><div className="title">{t('set.trashDays')}</div><div className="desc">{t('set.trashDays.sub')}</div></div>
+          <div className="text"><div className="title">{t('set.trashDays')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('set.trashDays.sub')}</div></div>
           <select value={settings.trashRetentionDays} onChange={(e) => updateSettings({ trashRetentionDays: Number(e.target.value) })} style={{ width: 'auto', minWidth: 96 }}>
             {[3, 7, 14, 30, 60].map((d) => <option key={d} value={d}>{t('set.days', { n: fmtNum(d) })}</option>)}
           </select>
@@ -169,7 +169,7 @@ export function Settings(): JSX.Element {
           </select>
         </div>
         <div className="row">
-          <div className="text"><div className="title">{t('set.ownCache')}</div><div className="desc">{t('set.ownCache.sub')}</div></div>
+          <div className="text"><div className="title">{t('set.ownCache')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('set.ownCache.sub')}</div></div>
           <button className="btn btn-sm" onClick={() => Native.clearOwnCache().then((r) => { success(); showToast(t('set.freedToast', { size: formatBytes(r.freedBytes) })) })}>{t('set.clear')}</button>
         </div>
       </div>
@@ -190,7 +190,7 @@ export function Settings(): JSX.Element {
         </div>
         <div className="row" onClick={() => { tap(); Native.openUrl({ url: RELEASES_URL }) }}>
           <Ico name="download" tone="tone-blue" size="sm" />
-          <div className="text"><div className="title">{t('set.checkUpdate')}</div><div className="desc">{t('set.checkUpdate.sub')}</div></div>
+          <div className="text"><div className="title">{t('set.checkUpdate')}</div><div className="desc" style={{ whiteSpace: 'normal' }}>{t('set.checkUpdate.sub')}</div></div>
           <Icon name="externalLink" size={16} className="muted" />
         </div>
       </div>
