@@ -4,6 +4,7 @@ import { t } from './i18n'
 export type PageId =
   | 'dashboard'
   | 'overview'
+  | 'assistant'
   | 'plan'
   | 'cleaner'
   | 'uninstaller'
@@ -46,6 +47,7 @@ export function pageSub(id: PageId): string {
 export const PAGE_META: Record<PageId, PageMeta> = {
   dashboard: { title: 'page.dashboard', sub: 'page.dashboard.sub', icon: 'house', tone: 'tone-yellow' },
   overview: { title: 'page.overview', sub: 'page.overview.sub', icon: 'trendUp', tone: 'tone-orange' },
+  assistant: { title: 'page.assistant', sub: 'page.assistant.sub', icon: 'brain', tone: 'tone-violet' },
   plan: { title: 'page.plan', sub: 'page.plan.sub', icon: 'checkCircle', tone: 'tone-green' },
   cleaner: { title: 'page.cleaner', sub: 'page.cleaner.sub', icon: 'sparkles', tone: 'tone-yellow' },
   uninstaller: { title: 'page.uninstaller', sub: 'page.uninstaller.sub', icon: 'trash', tone: 'tone-red' },
@@ -71,6 +73,7 @@ export const PAGE_META: Record<PageId, PageMeta> = {
 
 /** الأدوات التي يمكن تثبيتها والبحث فيها */
 export const TOOL_PAGES: PageId[] = [
+  'assistant',
   'overview',
   'plan',
   'cleaner',

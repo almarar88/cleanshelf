@@ -35,6 +35,7 @@ import type {
   OldDownload,
   SystemReport
 } from '../shared/types'
+import type { AiEvent, AiModelId, AiStatus, AiTurnInput } from '../shared/types'
 import type { BatchRenamePlan, BatchRenameResult } from '../main/lib/fileManagerLib'
 
 const api = {
@@ -218,6 +219,23 @@ const api = {
     pickImageFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:pickImageFile'),
     confirm: (message: string, detail?: string): Promise<boolean> =>
       ipcRenderer.invoke('dialog:confirm', message, detail)
+  },
+  ai: {
+    status: (): Promise<AiStatus> => ipcRenderer.invoke('ai:status'),
+    setKey: (key: string): Promise<{ ok: boolean; message?: string }> =>
+      ipcRenderer.invoke('ai:setKey', key),
+    clearKey: (): Promise<void> => ipcRenderer.invoke('ai:clearKey'),
+    ask: (input: AiTurnInput): Promise<void> => ipcRenderer.invoke('ai:ask', input),
+    cancel: (): Promise<void> => ipcRenderer.invoke('ai:cancel'),
+    explain: (prompt: string, lang: 'ar' | 'en', model: AiModelId): Promise<string> =>
+      ipcRenderer.invoke('ai:explain', prompt, lang, model),
+    onEvent: (listener: (event: AiEvent) => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, ev: AiEvent): void => listener(ev)
+      ipcRenderer.on('ai:event', handler)
+      return (): void => {
+        ipcRenderer.removeListener('ai:event', handler)
+      }
+    }
   }
 }
 

@@ -9,6 +9,7 @@ import { registerSystemInfoIpc } from './ipc/systemInfo'
 import { registerDialogIpc } from './ipc/dialogs'
 import { registerSystemToolsIpc } from './ipc/systemTools'
 import { registerExtrasIpc } from './ipc/extras'
+import { registerAiIpc } from './ipc/ai'
 import { readSettings, getSettingsSync } from './lib/settingsLib'
 import { syncTray, focusMainWindow } from './lib/tray'
 
@@ -87,6 +88,7 @@ app.whenReady().then(async () => {
   registerDialogIpc()
   registerSystemToolsIpc()
   registerExtrasIpc()
+  registerAiIpc()
 
   const settings = await readSettings()
   createWindow()

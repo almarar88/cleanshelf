@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import type { ProcessEntry } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { useToast } from '../lib/toastContext'
 import { fmtNum } from '../lib/format'
-import { t } from '../lib/i18n'
+import { t, useI18n } from '../lib/i18n'
+import { ExplainPanel, useAiReady } from '../components/Explain'
 
 type SortKey = 'memoryBytes' | 'cpuPercent' | 'name'
 
 export function Processes(): JSX.Element {
   const { showToast } = useToast()
+  const { lang } = useI18n()
+  const ai = useAiReady()
+  const [explainPid, setExplainPid] = useState<number | null>(null)
   const [processes, setProcesses] = useState<ProcessEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -106,18 +110,41 @@ export function Processes(): JSX.Element {
           </thead>
           <tbody>
             {visible.slice(0, 300).map((p) => (
-              <tr key={p.pid}>
-                <td style={{ fontWeight: 600 }}>{p.name}</td>
-                <td className="muted">{p.pid}</td>
-                <td>{p.cpuPercent}%</td>
-                <td>{formatBytes(p.memoryBytes)}</td>
-                <td className="muted">{p.user || '—'}</td>
-                <td>
-                  <button className="btn btn-sm btn-danger" onClick={() => kill(p)}>
-                    {t('pr.kill')}
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={p.pid}>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>{p.name}</td>
+                  <td className="muted">{p.pid}</td>
+                  <td>{p.cpuPercent}%</td>
+                  <td>{formatBytes(p.memoryBytes)}</td>
+                  <td className="muted">{p.user || '—'}</td>
+                  <td className="row-actions">
+                    {ai.ready && (
+                      <button
+                        className={`btn btn-sm btn-ghost explain-btn${explainPid === p.pid ? ' on' : ''}`}
+                        title={t('ai.explainBtn')}
+                        onClick={() => setExplainPid(explainPid === p.pid ? null : p.pid)}
+                      >
+                        <Icon name="brain" size={14} />
+                      </button>
+                    )}
+                    <button className="btn btn-sm btn-danger" onClick={() => kill(p)}>
+                      {t('pr.kill')}
+                    </button>
+                  </td>
+                </tr>
+                {ai.ready && explainPid === p.pid && (
+                  <tr className="explain-row">
+                    <td colSpan={6}>
+                      <ExplainPanel
+                        question={t('ai.explainProcess')}
+                        context={`${p.name} • PID ${p.pid} • CPU ${p.cpuPercent}% • RAM ${formatBytes(p.memoryBytes)} • ${p.user || '—'}`}
+                        lang={lang}
+                        model={ai.model}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>

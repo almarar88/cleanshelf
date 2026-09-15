@@ -16,6 +16,7 @@ function item(id: PageId, keywords: string): NavItem {
 
 export const MAIN_ITEMS: NavItem[] = [
   item('dashboard', 'home dashboard صحة'),
+  item('assistant', 'ai assistant claude ask مساعد ذكاء اصطناعي اسأل'),
   item('overview', 'overview forecast توقع نظرة'),
   item('plan', 'plan tasks خطة مهام'),
   item('cleaner', 'clean temp cache تنظيف'),
@@ -73,6 +74,7 @@ export function Sidebar({
     <div
       key={item.id}
       className={`nav-item ${active === item.id ? 'active' : ''}`}
+      data-page={item.id}
       onClick={() => onNavigate(item.id)}
       role="button"
       tabIndex={0}

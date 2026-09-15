@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppInfo, AppSettings, PlatformInfo } from '../../shared/types'
+import type { AiModelId, AiStatus, AppInfo, AppSettings, PlatformInfo } from '../../shared/types'
 import { ACCENTS, THEME_LABEL, type ThemeMode } from '../lib/theme'
 import { t, useI18n, type Lang } from '../lib/i18n'
 import { fmtNum } from '../lib/format'
@@ -8,16 +8,30 @@ import { Switch } from '../components/Switch'
 
 const RELEASES_URL = 'https://github.com/almarar88/cleanshelf/releases/latest'
 
+const AI_MODELS: { id: AiModelId; label: string }[] = [
+  { id: 'claude-opus-5', label: 'Claude Opus 5' },
+  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
+  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' }
+]
+
+const CONSOLE_URL = 'https://console.anthropic.com/settings/keys'
+
 export function Settings({
   settings,
-  onChange
+  onChange,
+  onKeyChange
 }: {
   settings: AppSettings | null
   onChange: (patch: Partial<AppSettings>) => void
+  onKeyChange?: (hasKey: boolean) => void
 }): JSX.Element {
   const { lang, setLang } = useI18n()
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [platform, setPlatform] = useState<PlatformInfo | null>(null)
+  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null)
+  const [keyDraft, setKeyDraft] = useState('')
+  const [keyBusy, setKeyBusy] = useState(false)
+  const [keyMessage, setKeyMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   function chooseLang(next: Lang): void {
     setLang(next)
@@ -27,7 +41,42 @@ export function Settings({
   useEffect(() => {
     window.api.system.appInfo().then(setInfo).catch(() => setInfo(null))
     window.api.platform.info().then(setPlatform).catch(() => setPlatform(null))
+    window.api.ai.status().then(setAiStatus).catch(() => setAiStatus(null))
   }, [])
+
+  async function saveKey(): Promise<void> {
+    setKeyBusy(true)
+    setKeyMessage(null)
+    try {
+      const result = await window.api.ai.setKey(keyDraft)
+      if (!result.ok) {
+        setKeyMessage({ ok: false, text: aiErrorText(result.message ?? '') })
+        return
+      }
+      setKeyDraft('')
+      const status = await window.api.ai.status()
+      setAiStatus(status)
+      onKeyChange?.(status.hasKey)
+      setKeyMessage({ ok: true, text: t('set.ai.ok') })
+    } finally {
+      setKeyBusy(false)
+    }
+  }
+
+  async function removeKey(): Promise<void> {
+    await window.api.ai.clearKey()
+    const status = await window.api.ai.status()
+    setAiStatus(status)
+    onKeyChange?.(status.hasKey)
+    setKeyMessage({ ok: true, text: t('set.ai.removed') })
+  }
+
+  function aiErrorText(code: string): string {
+    if (code === 'auth') return t('ai.err.auth')
+    if (code === 'rate-limit') return t('ai.err.rate')
+    if (code === 'offline') return t('ai.err.offline')
+    return t('ai.err.generic', { msg: code })
+  }
 
   if (!settings) {
     return (
@@ -89,6 +138,73 @@ export function Settings({
         </div>
       </Section>
 
+      <Section icon="brain" title={t('set.ai')} desc={t('set.ai.sub')}>
+        <Row title={t('set.ai.enable')} desc={t('set.ai.enableSub')}>
+          <Switch checked={settings.aiEnabled} onChange={(v) => onChange({ aiEnabled: v })} label={t('set.ai.enable')} />
+        </Row>
+
+        {settings.aiEnabled && (
+          <>
+            <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+              <div className="text">
+                <div className="title">{t('set.ai.key')}</div>
+                <div className="desc" style={{ whiteSpace: 'normal' }}>{t('set.ai.keySub')}</div>
+              </div>
+              {aiStatus?.hasKey && !keyDraft ? (
+                <div className="toolbar" style={{ marginBottom: 0 }}>
+                  <span className="badge badge-safe"><Icon name="check" size={13} /> {t('set.ai.saved', { hint: aiStatus.keyHint ?? '' })}</span>
+                  <div className="spacer" />
+                  <button className="btn btn-sm btn-danger" onClick={removeKey}>{t('set.ai.remove')}</button>
+                </div>
+              ) : (
+                <div className="toolbar" style={{ marginBottom: 0 }}>
+                  <input
+                    type="password"
+                    value={keyDraft}
+                    placeholder={t('set.ai.keyPlaceholder')}
+                    onChange={(e) => setKeyDraft(e.target.value)}
+                    style={{ flex: 1, direction: 'ltr' }}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <button className="btn btn-sm btn-primary" disabled={!keyDraft.trim() || keyBusy} onClick={saveKey}>
+                    {keyBusy ? t('set.ai.saving') : t('set.ai.save')}
+                  </button>
+                </div>
+              )}
+              {keyMessage && (
+                <div className={keyMessage.ok ? 'badge badge-safe' : 'badge badge-danger'} style={{ alignSelf: 'flex-start' }}>
+                  {keyMessage.text}
+                </div>
+              )}
+              {aiStatus && !aiStatus.encryptionAvailable && (
+                <div className="notice notice-warn" style={{ marginBottom: 0 }}>
+                  <Icon name="alert" size={16} />
+                  <div>{t('set.ai.noEncryption')}</div>
+                </div>
+              )}
+              <button className="btn btn-sm btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => window.api.app.openExternal(CONSOLE_URL)}>
+                <Icon name="externalLink" size={14} /> {t('set.ai.getKey')}
+              </button>
+            </div>
+
+            <Row title={t('set.ai.model')} desc={t('set.ai.modelSub')}>
+              <select value={settings.aiModel} onChange={(e) => onChange({ aiModel: e.target.value as AiModelId })}>
+                {AI_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </Row>
+
+            <div className="settings-row">
+              <div className="text">
+                <div className="desc" style={{ whiteSpace: 'normal' }}>{t('ai.privacy')} {t('set.ai.cost')}</div>
+              </div>
+            </div>
+          </>
+        )}
+      </Section>
+
       <Section icon="cog" title={t('set.behavior')} desc={t('set.behavior.sub')}>
         <Row title={t('set.tray')} desc={t('set.tray.sub2')}>
           <Switch checked={settings.minimizeToTray} onChange={(v) => onChange({ minimizeToTray: v })} label={t('set.tray')} />
@@ -139,7 +255,7 @@ export function Settings({
   )
 }
 
-function Section({ icon, title, desc, children }: { icon: 'palette' | 'cog' | 'layers' | 'info' | 'globe'; title: string; desc: string; children: React.ReactNode }): JSX.Element {
+function Section({ icon, title, desc, children }: { icon: 'palette' | 'cog' | 'layers' | 'info' | 'globe' | 'brain'; title: string; desc: string; children: React.ReactNode }): JSX.Element {
   return (
     <div className="card card-pad" style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>

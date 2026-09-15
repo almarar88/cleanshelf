@@ -24,6 +24,7 @@ import { Shredder } from './pages/Shredder'
 import { OldDownloads } from './pages/OldDownloads'
 import { Report } from './pages/Report'
 import { Settings } from './pages/Settings'
+import { Assistant } from './pages/Assistant'
 import { Overview } from './pages/Overview'
 import { Plan } from './pages/Plan'
 import { PAGE_META, pageSub, pageTitle, type PageId as Page } from './lib/pages'
@@ -45,6 +46,7 @@ function AppInner(): JSX.Element {
   const [command, setCommand] = useState<string | null>(null)
   const [isMac, setIsMac] = useState(false)
   const [pinned, setPinned] = useState<Page[]>(loadPinned)
+  const [hasAiKey, setHasAiKey] = useState(false)
   const meta = PAGE_META[page]
 
   const onTogglePin = useCallback((id: Page) => {
@@ -64,6 +66,7 @@ function AppInner(): JSX.Element {
       })
       .catch(() => setSettings(null))
     window.api.platform.info().then((p) => setIsMac(p.isMac)).catch(() => setIsMac(false))
+    window.api.ai.status().then((s) => setHasAiKey(s.hasKey)).catch(() => setHasAiKey(false))
   }, [])
 
   useEffect(() => {
@@ -178,10 +181,28 @@ function AppInner(): JSX.Element {
         tone: 'tone-teal',
         keywords: 'report export',
         action: () => setPage('report')
+      },
+      {
+        id: 'act:ask',
+        label: t('palette.ask'),
+        group: t('palette.actions'),
+        icon: 'brain',
+        tone: 'tone-violet',
+        keywords: 'ai assistant ask claude ذكاء مساعد اسأل',
+        action: () => setPage('assistant')
+      },
+      {
+        id: 'act:ai',
+        label: t(settings?.aiEnabled ? 'palette.aiOff' : 'palette.aiOn'),
+        group: t('palette.actions'),
+        icon: 'brain',
+        tone: 'tone-violet',
+        keywords: 'ai enable disable تفعيل تعطيل ذكاء',
+        action: () => updateSettings({ aiEnabled: !settings?.aiEnabled })
       }
     ]
     return [...actions, ...pages]
-  }, [isMac, theme, cycleTheme, lang, toggleLang])
+  }, [isMac, theme, cycleTheme, lang, toggleLang, settings?.aiEnabled, updateSettings])
 
   const onCommandHandled = useCallback(() => setCommand(null), [])
 
@@ -198,6 +219,8 @@ function AppInner(): JSX.Element {
             onTogglePin={onTogglePin}
           />
         )
+      case 'assistant':
+        return <Assistant settings={settings} hasKey={hasAiKey} onNavigate={setPage} />
       case 'overview':
         return <Overview onNavigate={setPage} />
       case 'plan':
@@ -241,7 +264,7 @@ function AppInner(): JSX.Element {
       case 'report':
         return <Report />
       case 'settings':
-        return <Settings settings={settings} onChange={updateSettings} />
+        return <Settings settings={settings} onChange={updateSettings} onKeyChange={setHasAiKey} />
     }
   }
 

@@ -242,6 +242,9 @@ export type ProgressListener<T> = (payload: T) => void
 export interface AppSettings {
   /** لغة الواجهة — تضبط أيضًا اتجاه الصفحة */
   lang: 'ar' | 'en'
+  /** مميزات الذكاء الاصطناعي — معطّلة افتراضيًا حتى يوافق المستخدم صراحةً */
+  aiEnabled: boolean
+  aiModel: AiModelId
   theme: 'system' | 'light' | 'dark'
   /** صبغة لون التمييز بدرجات HSL */
   accentHue: number
@@ -338,4 +341,36 @@ export interface OldDownload {
 export interface SystemReport {
   generatedAt: string
   markdown: string
+}
+
+// ---------- الذكاء الاصطناعي ----------
+
+export type AiModelId = 'claude-opus-5' | 'claude-sonnet-5' | 'claude-haiku-4-5'
+
+export interface AiMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface AiTurnInput {
+  messages: AiMessage[]
+  model: AiModelId
+  lang: 'ar' | 'en'
+}
+
+/** أحداث تُبثّ أثناء الجولة لتظهر الإجابة والأدوات أولًا بأول. */
+export type AiEvent =
+  | { type: 'text'; text: string }
+  | { type: 'tool'; name: string; status: 'start' | 'done' | 'error' }
+  | { type: 'usage'; inputTokens: number; outputTokens: number }
+  | { type: 'error'; message: string }
+  | { type: 'cancelled' }
+  | { type: 'done' }
+
+export interface AiStatus {
+  /** مفتاح محفوظ فعلًا */
+  hasKey: boolean
+  keyHint: string | null
+  /** التشفير عبر سلسلة مفاتيح النظام متاح */
+  encryptionAvailable: boolean
 }

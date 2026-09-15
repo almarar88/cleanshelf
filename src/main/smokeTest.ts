@@ -194,5 +194,22 @@ export async function runSmokeTest(win: BrowserWindow): Promise<void> {
     })
   )
 
+  // 6) صفحة المساعد الذكي تُفتح وتُرسم (معطّلة افتراضيًا، فتظهر حالة التفعيل)
+  await check('صفحة المساعد الذكي', async () =>
+    retry(async () => {
+      await win.webContents.executeJavaScript(
+        "document.querySelector('.nav-item[data-page=\"assistant\"]').click()"
+      )
+      await new Promise((r) => setTimeout(r, 700))
+      const found = await win.webContents.executeJavaScript(
+        "[!!document.querySelector('.ai-page'), !!document.querySelector('.page .empty .ico.tone-violet'), typeof window.api?.ai?.ask].join(',')"
+      )
+      const [aiPage, emptyState, askType] = String(found).split(',')
+      if (askType !== 'function') throw new Error(`جسر الذكاء الاصطناعي مفقود: ${askType}`)
+      if (aiPage !== 'true' && emptyState !== 'true') throw new Error(`لم تُرسم صفحة المساعد: ${found}`)
+      return aiPage === 'true' ? 'محادثة المساعد' : 'حالة التفعيل'
+    })
+  )
+
   finish()
 }

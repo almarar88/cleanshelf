@@ -4,7 +4,21 @@ import type { AudioTag } from '../../shared/types'
 import { formatDuration } from '../lib/format'
 import { useToast } from '../lib/toastContext'
 import { fmtNum } from '../lib/format'
-import { t } from '../lib/i18n'
+import { t, useI18n } from '../lib/i18n'
+import { useAiReady } from '../components/Explain'
+
+/** يلتقط أول مصفوفة JSON في نصّ قد يحيط بها كلام. */
+function extractJsonArray(text: string): unknown[] | null {
+  const start = text.indexOf('[')
+  const end = text.lastIndexOf(']')
+  if (start === -1 || end <= start) return null
+  try {
+    const parsed = JSON.parse(text.slice(start, end + 1))
+    return Array.isArray(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
 
 type FormState = Partial<
   Pick<AudioTag, 'title' | 'artist' | 'album' | 'albumArtist' | 'year' | 'genre' | 'track' | 'comment'>
@@ -14,6 +28,9 @@ const EMPTY_FORM: FormState = {}
 
 export function TagEditor(): JSX.Element {
   const { showToast } = useToast()
+  const { lang } = useI18n()
+  const ai = useAiReady()
+  const [smartBusy, setSmartBusy] = useState(false)
   const [folder, setFolder] = useState<string | null>(null)
   const [files, setFiles] = useState<AudioTag[]>([])
   const [loading, setLoading] = useState(false)
@@ -118,6 +135,73 @@ export function TagEditor(): JSX.Element {
     const written = await window.api.tags.writeBatch(writes)
     showToast(t('tg.filled', { n: fmtNum(written.filter((w) => w.success).length) }))
     setFiles(await window.api.tags.readFolder(folder))
+  }
+
+  /**
+   * تعبئة ذكية: تُرسَل أسماء الملفات فقط (لا محتواها) ليستنتج النموذج
+   * الفنان والعنوان والألبوم من التسمية الفوضوية.
+   */
+  async function smartFill(): Promise<void> {
+    const targets = selectedFiles.length > 0 ? selectedFiles : files
+    if (targets.length === 0 || smartBusy) return
+    const batch = targets.slice(0, 40)
+    setSmartBusy(true)
+    try {
+      const prompt = [
+        lang === 'ar'
+          ? 'استنتج وسوم الصوت من أسماء الملفات التالية. أعد مصفوفة JSON فقط، بلا أي شرح، كل عنصر: {"fileName":"…","artist":"…","title":"…","album":"…"}. اترك القيمة سلسلة فارغة إن لم تستطع الاستنتاج.'
+          : 'Infer audio tags from these file names. Reply with a JSON array only, no prose, each item: {"fileName":"…","artist":"…","title":"…","album":"…"}. Use an empty string when you cannot infer a field.',
+        '',
+        ...batch.map((f) => f.fileName)
+      ].join('\n')
+
+      const raw = await window.api.ai.explain(prompt, lang, ai.model)
+      const parsed = extractJsonArray(raw) as
+        | { fileName?: string; artist?: string; title?: string; album?: string }[]
+        | null
+      if (!parsed || parsed.length === 0) {
+        showToast(t('ai.smartTagsFail'))
+        return
+      }
+
+      if (selectedFiles.length === 1) {
+        const guess = parsed[0]
+        setForm((prev) => ({
+          ...prev,
+          artist: guess.artist || prev.artist,
+          title: guess.title || prev.title,
+          album: guess.album || prev.album
+        }))
+        showToast(t('ai.smartTagsDone'))
+        return
+      }
+
+      // مطابقة بالاسم، ولا نكتب إلا ما استُنتج فعلًا
+      const byName = new Map(batch.map((f) => [f.fileName, f.path]))
+      const writes = parsed
+        .map((g) => {
+          const path = g.fileName ? byName.get(g.fileName) : undefined
+          if (!path) return null
+          const fields: Record<string, string> = {}
+          if (g.artist) fields.artist = g.artist
+          if (g.title) fields.title = g.title
+          if (g.album) fields.album = g.album
+          return Object.keys(fields).length > 0 ? { path, ...fields } : null
+        })
+        .filter((w): w is { path: string } & Record<string, string> => w !== null)
+
+      if (writes.length === 0) {
+        showToast(t('ai.smartTagsFail'))
+        return
+      }
+      const written = await window.api.tags.writeBatch(writes)
+      showToast(t('tg.filled', { n: fmtNum(written.filter((w) => w.success).length) }))
+      if (folder) setFiles(await window.api.tags.readFolder(folder))
+    } catch {
+      showToast(t('ai.smartTagsFail'))
+    } finally {
+      setSmartBusy(false)
+    }
   }
 
   return (
@@ -248,6 +332,21 @@ export function TagEditor(): JSX.Element {
             <p className="muted" style={{ fontSize: 11.5 }}>
               {t('tg.patternExample')}
             </p>
+            {ai.ready && (
+              <>
+                <button
+                  className="btn btn-sm explain-btn"
+                  style={{ marginTop: 6 }}
+                  onClick={smartFill}
+                  disabled={smartBusy || files.length === 0}
+                >
+                  <Icon name="brain" size={15} /> {smartBusy ? t('ai.smartTagsBusy') : t('ai.smartTags')}
+                </button>
+                <p className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
+                  {t('ai.smartTagsHint')}
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

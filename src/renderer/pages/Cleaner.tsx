@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import type { CleanerCategory, CleanProgress } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 import { categoryLabel } from '../lib/labels'
 import { useToast } from '../lib/toastContext'
-import { getLang, t } from '../lib/i18n'
+import { getLang, t, useI18n } from '../lib/i18n'
+import { ExplainPanel, useAiReady } from '../components/Explain'
 import { fmtNum } from '../lib/format'
 
 export function Cleaner(): JSX.Element {
   const { showToast } = useToast()
+  const { lang } = useI18n()
+  const ai = useAiReady()
+  const [explainId, setExplainId] = useState<string | null>(null)
+  const [review, setReview] = useState(false)
   const [loading, setLoading] = useState(true)
   const [categories, setCategories] = useState<CleanerCategory[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -108,6 +113,15 @@ export function Cleaner(): JSX.Element {
         <div className="card-pad" style={{ padding: '6px 14px' }}>
           {t('cl.selectedLabel')} <strong>{formatBytes(selectedSizeBytes)}</strong>
         </div>
+        {ai.ready && (
+          <button
+            className={`btn explain-btn${review ? ' on' : ''}`}
+            disabled={loading || categories.length === 0}
+            onClick={() => setReview(!review)}
+          >
+            <Icon name="brain" size={15} /> {t('cl.smartReview')}
+          </button>
+        )}
         <button
           className="btn btn-primary"
           disabled={selected.size === 0 || cleaning || loading}
@@ -116,6 +130,24 @@ export function Cleaner(): JSX.Element {
           <Icon name="sparkles" size={15} /> {cleaning ? t('cl.cleaning') : t('cl.cleanSelected')}
         </button>
       </div>
+
+      {ai.ready && review && categories.length > 0 && (
+        <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <ExplainPanel
+            question={t('cl.smartReviewQ')}
+            context={categories
+              .map(
+                (c) =>
+                  `${categoryLabel(c.labelKey).title}: ${formatBytes(c.sizeBytes)} / ${c.fileCount} ${
+                    c.risk === 'caution' ? '(caution)' : '(safe)'
+                  }`
+              )
+              .join('\n')}
+            lang={lang}
+            model={ai.model}
+          />
+        </div>
+      )}
 
       {!isAdmin && adminCategoriesWithData.length > 0 && (
         <div
@@ -152,7 +184,8 @@ export function Cleaner(): JSX.Element {
               const label = categoryLabel(cat.labelKey)
               const prog = progress[cat.id]
               return (
-                <tr key={cat.id} className={cat.risk === 'caution' ? 'risk-caution-row' : ''}>
+                <Fragment key={cat.id}>
+                <tr className={cat.risk === 'caution' ? 'risk-caution-row' : ''}>
                   <td>
                     <input
                       type="checkbox"
@@ -173,10 +206,18 @@ export function Cleaner(): JSX.Element {
                     </div>
                     <div className="muted" style={{ fontSize: 12 }}>
                       {label.desc}
+                      {ai.ready && (
+                        <button
+                          className={`btn btn-sm btn-ghost explain-btn inline${explainId === cat.id ? ' on' : ''}`}
+                          onClick={() => setExplainId(explainId === cat.id ? null : cat.id)}
+                        >
+                          <Icon name="brain" size={13} /> {t('ai.explainBtn')}
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td>{formatBytes(cat.sizeBytes)}</td>
-                  <td>{cat.fileCount.toLocaleString('ar')}</td>
+                  <td>{fmtNum(cat.fileCount)}</td>
                   <td>
                     {prog?.done ? (
                       prog.error ? (
@@ -195,6 +236,21 @@ export function Cleaner(): JSX.Element {
                     )}
                   </td>
                 </tr>
+                {ai.ready && explainId === cat.id && (
+                  <tr className="explain-row">
+                    <td colSpan={5}>
+                      <ExplainPanel
+                        question={t('ai.explainCategory')}
+                        context={`${label.title} — ${label.desc} • ${formatBytes(cat.sizeBytes)} • ${fmtNum(cat.fileCount)} • ${
+                          cat.risk === 'caution' ? 'caution' : 'safe'
+                        }`}
+                        lang={lang}
+                        model={ai.model}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               )
             })}
           </tbody>

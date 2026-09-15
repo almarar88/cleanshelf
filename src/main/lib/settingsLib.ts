@@ -5,6 +5,8 @@ import type { AppSettings } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: AppSettings = {
   lang: 'ar',
+  aiEnabled: false,
+  aiModel: 'claude-opus-5',
   theme: 'system',
   accentHue: 45,
   minimizeToTray: false,
@@ -25,6 +27,9 @@ function sanitize(raw: unknown): AppSettings {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const out: AppSettings = { ...DEFAULT_SETTINGS }
   if (obj.lang === 'ar' || obj.lang === 'en') out.lang = obj.lang
+  if (typeof obj.aiEnabled === 'boolean') out.aiEnabled = obj.aiEnabled
+  if (obj.aiModel === 'claude-opus-5' || obj.aiModel === 'claude-sonnet-5' || obj.aiModel === 'claude-haiku-4-5')
+    out.aiModel = obj.aiModel
   if (obj.theme === 'light' || obj.theme === 'dark' || obj.theme === 'system') out.theme = obj.theme
   if (typeof obj.accentHue === 'number' && obj.accentHue >= 0 && obj.accentHue <= 360)
     out.accentHue = obj.accentHue
